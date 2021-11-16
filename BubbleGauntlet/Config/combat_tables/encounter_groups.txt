@@ -1,0 +1,34 @@
+﻿EasyPede 1 3
+4 EasyPede
+
+EasyBuzz 1 3
+4 EasyBuzz
+
+MixedInsects1 1 3
+4 MixedInsects1
+
+KoboldsEasy 1 3
+4 KoboldsEasy
+
+DrowEasy 1 3
+3 DrowEasy
+
+BanditsEasy 1 3
+3 BanditsEasy
+
+CultistsEasy 1 3
+3 CultistsEasy
+
+KoboldsEasy2 2 4
+6 KoboldsEasy
+
+MixedInsects1_2 2 4
+5 MixedInsects1
+
+CultistsEasy 2 4
+5 CultistsEasy
+
+Bandits2 2 5
+4 Bandits2
+3 BanditsEasy
+

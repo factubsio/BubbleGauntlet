@@ -1,0 +1,77 @@
+﻿EasyPede
+8 CR0_25_GiantCentipedeStandard_NoPoison
+3 CR0_25_GiantCentipedeYoung
+
+EasyBuzz
+8 CR1_GiantFlyStandard
+2 CR1_GiantFlyFiendish
+
+MixedInsects1
+1 EasyPede
+1 EasyBuzz
+
+KoboldsEasy
+5 CR0_75_KoboldMeleeWarriorLevel3
+5 CR0_75_KoboldMeleeWarriorLevel3_Alternative
+3 CR0_75_KoboldRangedWarriorLevel3
+3 CR0_75_KoboldRangedWarriorLevel3_Alternative
+4 CR1_GiantSpiderStandard
+
+DrowEasy
+5 CR0_3_Drow_Warrior_Male
+3 CR0_5_Drow_FighterMelee_Female
+3 CR0_5_Drow_FighterRanged_Female
+1 CR1_Drow_FighterMelee_Female
+1 CR1_Drow_FighterRanged_Female
+
+BanditsEasy
+8 CR1_Bandit_Human_FighterMelee_Male2
+8 CR1_Bandit_Human_FighterMelee_Male
+3 CR1_Bandit_Human_FighterRanged_Male
+3 CR1_Bandit_Human_FighterRanged_Female
+2 CR1_Bandit_Human_Bard_Male
+1 CR1_Bandit_Human_Conjurer_Male
+1 CR1_Bandit_Human_BarbarianMelee_Male
+1 CR1_Bandit_Human_Illusionist_Male
+1 CR1_Bandit_Human_NegativeCleric_Female
+1 CR1_Bandit_Human_Transmuter_Male
+1 CR1_Bandit_Human_RogueMelee_Male
+1 CR1_Bandit_Human_RogueRanged_Male
+
+CultistsEasy
+5 CR1_Cultist_Baphomet_Melee
+5 CR1_Cultist_Baphomet_Melee_HalfOrc_Traitor
+5 CR1_Cultist_Baphomet_Melee_RE
+5 CR1_Cultist_Cleric
+5 CR1_Cultist_Cleric_ElfFemale
+5 CR1_Cultist_Deskari_Melee
+5 CR1_Cultist_Deskari_Melee_FemaleDwarf
+5 CR1_Cultist_Deskari_Melee_RE
+5 CR1_Cultist_FighterMelee
+5 CR1_Cultist_Ranged
+3 CR1_Cultist_BarbarianMelee
+2 CR1_Cultist_Wizard_BurningHands
+2 CR1_Cultist_Wizard_RayOfSickening
+
+Bandits2
+1 CR2_Bandit_Human_Alchemist_Male
+3 CR2_Bandit_Human_BarbarianMelee_Male
+2 CR2_Bandit_Human_Conjurer_Male
+3 CR2_Bandit_Human_FighterMelee_Male
+3 CR2_Bandit_Human_FighterMelee_Male2
+3 CR2_Bandit_Human_FighterRanged_Female
+3 CR2_Bandit_Human_FighterRanged_Male
+1 CR2_Bandit_Human_Illusionist_Male
+1 CR2_Bandit_Human_Necromancer_Male
+1 CR2_Bandit_Human_NegativeCleric_Female
+1 CR2_Bandit_Human_PositiveCleric_Female
+2 CR2_Bandit_Human_RangerDistance_Male
+1 CR2_Bandit_Human_RogueMelee_Male
+1 CR2_Bandit_Human_RogueMelee_Male
+2 CR2_Bandit_Human_RogueRanged_Male
+2 CR2_Bandit_Human_Transmuter_Male
+
+Bandits1_2
+2 BanditsEasy
+1 Bandits2
+

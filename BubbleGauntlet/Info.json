@@ -1,0 +1,13 @@
+﻿{
+    "AssemblyName": "BubbleGauntlet.dll",
+    "Author": "bubbles",
+    "DisplayName": "Bubble Gauntlet",
+    "EntryMethod": "BubbleGauntlet.Main.Load",
+    "GameVersion": "1.1.0",
+    "HomePage": "https://github.com/factubsio/BubbleGauntlet/releases",
+    "Id": "BubbleGauntlet",
+    "ManagerVersion": "0.23.0",
+    "Repository": "https://raw.githubusercontent.com/factubsio/BubbleGauntlet/master/Repository.json",
+    "Requirements": [],
+    "Version": "0.0.1"
+}
