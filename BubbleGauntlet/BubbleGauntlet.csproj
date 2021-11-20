@@ -54,6 +54,19 @@
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'BUBBLEDEV|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\BUBBLEDEV\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;BUBBLEDEV</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>
+
+0649</NoWarn>
+    <DebugType>portable</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <LangVersion>9</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
   <Target Name="RemoveLib" BeforeTargets="Clean" Condition="Exists('$(SolutionDir)lib')">
     <RemoveDir Directories="$(SolutionDir)lib" />
   </Target>
@@ -164,12 +177,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BlueprintClass.cs" />
     <Compile Include="BookEncounters.cs" />
     <Compile Include="ConditionsAndActions.cs" />
     <Compile Include="ContentManager.cs" />
     <Compile Include="Dialog.cs" />
     <Compile Include="Encounters.cs" />
     <Compile Include="FightEncounters.cs" />
+    <Compile Include="FUN.cs" />
     <Compile Include="GauntletController.cs" />
     <Compile Include="GauntletState.cs" />
     <Compile Include="MonsterDB.cs" />
@@ -180,7 +195,9 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="RosterSaver.cs" />
     <Compile Include="TextTemplates.cs" />
+    <Compile Include="Theme.cs" />
     <Compile Include="UIHelpers.cs" />
     <Compile Include="Config\Blueprints.cs" />
     <Compile Include="Config\IDisableableGroup.cs" />

@@ -226,15 +226,6 @@ namespace BubbleGauntlet {
         }
 
         void IWarningNotificationUIHandler.HandleWarning(WarningNotificationType warningType, bool addToLog) {
-            if (warningType == WarningNotificationType.GameSavedInProgress) {
-                Main.Log("SAVING");
-                Main.Log(StackTraceUtility.ExtractStackTrace());
-                //GauntletController.Save();
-            }
-            if (warningType == WarningNotificationType.GameLoaded) {
-                if (Game.Instance.State.LoadedAreaState.Blueprint.AssetGuid == ContentManager.Area?.AssetGuid) {
-                }
-            }
         }
 
         void IAreaHandler.OnAreaDidLoad() { }
@@ -295,7 +286,7 @@ namespace BubbleGauntlet {
         }
 
         static void OnUpdate(UnityModManager.ModEntry modEntry, float delta) {
-#if DEBUG
+#if DEBUG && BUBBLEDEV
             if (Input.GetKeyDown(KeyCode.C) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
                 FxHelper.DestroyAllBlood();
                 foreach (var entity in Game.Instance.State.LoadedAreaState.GetAllSceneStates()

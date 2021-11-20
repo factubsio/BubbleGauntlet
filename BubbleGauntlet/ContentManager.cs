@@ -29,19 +29,37 @@ using UnityEngine;
 using static Kingmaker.QA.Statistics.ExperienceGainStatistic;
 
 namespace BubbleGauntlet {
+    public class AreaMap {
+        public BlueprintAreaEnterPoint AreaEnter;
+        public BlueprintArea Area;
+        public Func<AreaMap, Vector3> GetVendorSpawnLocation;
+
+        public Vector3 VendorSpawnLocation => GetVendorSpawnLocation(this);
+
+        public static AreaMap FromRE(string re) {
+            AreaMap map = new();
+            var areaRE = BP.GetBlueprint<BlueprintRandomEncounter>(re);
+            map.AreaEnter = areaRE.AreaEntrance;
+            map.Area = map.AreaEnter.Area;
+            map.Area.LoadingScreenSprites.Add(ContentManager.BGSprite);
+            map.Area.CampingSettings.CampingAllowed = false;
+            return map;
+        }
+    }
+
     public static class ContentManager {
 
         public static BlueprintAbility FakeBlueprint = new();
         public static BlueprintUnit BubbleMasterBlueprint => BP.GetBlueprint<BlueprintUnit>("0234cbc0cc844da4d9cb225d6ed76a18");
+        public static BlueprintUnit ServiceVendorBlueprint => BP.GetBlueprint<BlueprintUnit>("9a1443603c9353d4194a583a31228c8b");
 
+        public static BlueprintDialog ServiceDialog;
         public static BlueprintDialog BubbleDialog;
         public static BlueprintDialog DescendDialog;
         public static LocalizedString DescendSpeaker;
 
-        public static BlueprintAreaEnterPoint AreaEnter;
-        public static BlueprintArea Area;
+        public static List<AreaMap> Maps = new();
 
-        public static string KeraliaForestRE = "5bb1c0aeb0cda2b41aca56ba6af52980";
 
         public static List<BlueprintUnit> Vendors = new();
         public static Sprite BGSprite;
@@ -54,6 +72,29 @@ namespace BubbleGauntlet {
         };
 
         public static void CreateBubbleDialog() {
+            var hydrateCustom = new DynamicGameAction(() => {
+                long goldBefore = Game.Instance.Player.Money;
+                if (goldBefore < Game.Instance.Player.GetCustomCompanionCost())
+                    return;
+
+
+                var toAdd = RosterSaver.HydrateUnit();
+
+                if (toAdd == null)
+                    return;
+
+                Game.Instance.Player.AddCompanion(toAdd);
+                toAdd.IsInGame = true;
+                Vector3 vector = Game.Instance.Player.MainCharacter.Value.Position;
+                if (AstarPath.active) {
+                    FreePlaceSelector.PlaceSpawnPlaces(2, toAdd.View.Corpulence, vector);
+                    vector = FreePlaceSelector.GetRelaxedPosition(1, true);
+                }
+                toAdd.Position = vector;
+                Game.Instance.Player.Money = goldBefore - Game.Instance.Player.GetCustomCompanionCost();
+                Main.Log($"Subtracted gold, now have: {Game.Instance.Player.Money}");
+                GameHelper.GainExperience(2000, null, GainType.Quest);
+            });
             var createCustom = new DynamicGameAction(() => {
                 long goldBefore = Game.Instance.Player.Money;
                 if (goldBefore < Game.Instance.Player.GetCustomCompanionCost())
@@ -89,60 +130,72 @@ namespace BubbleGauntlet {
                 Main.LogNotNull("vendor", GauntletController.Vendor);
                 GauntletController.Vendor.MarkForDestroy();
                 GauntletController.Floor.Shopping = false;
+                GauntletController.CompleteEncounter();
             });
 
             CueBuilder mainRoot = null;
 
-            var dialogBuilder = new DialogBuilder();
+            var serviceBuilder = new DialogBuilder();
             {
-                mainRoot = dialogBuilder.Root("{bubble_gauntlet_welcome}\n{bubble_encounters_remaining}.");
-                mainRoot.When(new DynamicCondition(() => !GauntletController.Floor.Shopping));
-                var backstory = dialogBuilder.Cue("I am the bubbliest bubble that ever bubbled");
-                var services = dialogBuilder.Cue("I can hire brave adventurers, raise dead companions, or bore you with backstory.\nI also stock a variety of common items.");
-                var descendCue = dialogBuilder.Cue("Ready yourself!");
+                mainRoot = serviceBuilder.Root("I am here to help, in any small way I can.\nI can hire brave adventurers, raise dead companions, and I stock a variety of common items.");
+                mainRoot.Speaker(ServiceVendorBlueprint.ToReference<BlueprintUnitReference>());
 
-                descendCue.OnStop(new DescendAction()).Commit();
-
-                backstory.ContinueWith(services).Commit();
-
-                var rootAnswers = mainRoot.Answers();
-
-                services.Answers()
-                    .Add("Raise all dead companions <{bubble_res_cost}> (no dead companions)")
+                mainRoot.Answers()
+                    .Add("Raise all dead companions. <{bubble_res_cost}> (no dead companions)")
                         .When(new HasDeadCompanions().Invert())
                         .Disabled()
                         .Commit()
-                    .Add("Raise all dead companions <{bubble_res_cost}> (not enough gold)")
+                    .Add("Raise all dead companions. <{bubble_res_cost}> (not enough gold)")
                         .When(new HasEnoughMoneyForRes().Invert(), new HasDeadCompanions())
                         .Disabled()
                         .Commit()
-                    .Add("Raise all dead companions <{bubble_res_cost}>")
+                    .Add("Raise all dead companions. <{bubble_res_cost}>")
                         .When(new HasEnoughMoneyForRes(), new HasDeadCompanions())
                         .AddAction(new ResurrectCompanions())
                         .Commit()
 
-                    .Add("Hire a companion <{custom_companion_cost}> (not enough gold)")
+                    .Add("Hire a companion. <{custom_companion_cost}> (not enough gold)")
                         .When(new HasEnoughMoneyForCustomCompanion().Invert())
                         .Disabled()
                         .Commit()
-                    .Add("Hire a companion <{custom_companion_cost}>")
+                    .Add("Recall a saved companion. <{custom_companion_cost}> (not enough gold)")
+                        .When(new HasEnoughMoneyForCustomCompanion().Invert())
+                        .Disabled()
+                        .Commit()
+
+                    .Add("Hire a companion. <{custom_companion_cost}>")
                         .When(new HasEnoughMoneyForCustomCompanion())
                         .AddAction(createCustom)
+                        .Commit()
+                    .Add("Recall a saved companion. <{custom_companion_cost}>")
+                        .When(new HasEnoughMoneyForCustomCompanion())
+                        .AddAction(hydrateCustom)
                         .Commit()
 
                     .Add("What do you have for sale?")
                         .AddAction(basicShop)
                         .Commit()
 
-                    .Add("Tell me more about yourself.")
-                        .ContinueWith(backstory)
+                    .Add("I have no need of you at this juncture.")
                         .Commit()
 
-                    .Add("I want to choose an encounter")
-                        .ContinueWith(mainRoot)
-                        .Commit()
                     .Commit();
-                services.Commit();
+                mainRoot.Commit();
+            }
+
+            var dialogBuilder = new DialogBuilder();
+            {
+                mainRoot = dialogBuilder.Root("{bubble_gauntlet_welcome}\n{bubble_encounters_remaining}.");
+                mainRoot.Speaker(BubbleMasterBlueprint.ToReference<BlueprintUnitReference>());
+                mainRoot.When(new DynamicCondition(() => !GauntletController.Floor.Shopping));
+                var backstory = dialogBuilder.Cue("I am the bubbliest bubble that ever bubbled");
+                var descendCue = dialogBuilder.Cue("Ready yourself!");
+
+                descendCue.OnStop(new DescendAction()).Commit();
+
+                backstory.ContinueWith(mainRoot).Commit();
+
+                var rootAnswers = mainRoot.Answers();
 
                 rootAnswers.Add("ONWARD! Rest then contine to the next floor.")
                     .When(FloorState.NoEncounters)
@@ -157,8 +210,8 @@ namespace BubbleGauntlet {
                 }
 
                 rootAnswers
-                    .Add("What services do you offer?")
-                        .ContinueWith(services)
+                    .Add("Tell me more about yourself.")
+                        .ContinueWith(backstory)
                         .Commit()
 
                     .Add("I must still wait before bubbling.")
@@ -189,6 +242,7 @@ namespace BubbleGauntlet {
             var vendorIsActive = new DialogBuilder();
             {
                 var root = vendorIsActive.Root("Would you like me to dismiss the vendor so you can continue?");
+                root.Speaker(BubbleMasterBlueprint.ToReference<BlueprintUnitReference>());
                 root.When(new DynamicCondition(() => GauntletController.Floor.Shopping));
                 root.Answers()
                         .Add("No, I still have shopping to do.").Commit()
@@ -205,6 +259,11 @@ namespace BubbleGauntlet {
 
 
             mainRoot.Commit();
+
+            ServiceDialog = Helpers.CreateDialog("bubble-dialog-service", dialog => {
+                dialog.FirstCue.Cues.Add(serviceBuilder.Build());
+                dialog.TurnFirstSpeaker = true;
+            });
 
             BubbleDialog = Helpers.CreateDialog("bubble-dialog-bubblemaster", dialog => {
                 dialog.FirstCue.Cues.Add(dialogBuilder.Build());
@@ -229,6 +288,16 @@ namespace BubbleGauntlet {
             CreateVendorBlueprints();
             CreateBubbleDialog();
 
+            var service = ServiceVendorBlueprint;
+            service.SetLocalisedName("buble-service", "Trumpet Girl");
+
+            service.AddComponent<DialogOnClick>(onClick => {
+                onClick.m_Dialog = ServiceDialog.ToReference<BlueprintDialogReference>();
+                onClick.name = "start-service-dialog";
+                onClick.NoDialogActions = new();
+                onClick.Conditions = new();
+            });
+
             var crink = BubbleMasterBlueprint;
             crink.SetLocalisedName("bubble-dm", "Bubbles");
 
@@ -249,29 +318,30 @@ namespace BubbleGauntlet {
 
             });
 
-            var areaRE = BP.GetBlueprint<BlueprintRandomEncounter>(KeraliaForestRE);
-            AreaEnter = areaRE.AreaEntrance;
-            Area = AreaEnter.Area;
+
+            BGSprite = AssetLoader.LoadInternal("sprites", "gauntlet_loading.png", new Vector2Int(2048, 1024), TextureFormat.DXT5);
+
+            {
+                var map = AreaMap.FromRE("5bb1c0aeb0cda2b41aca56ba6af52980");
+                map.GetVendorSpawnLocation = area => {
+                    var pos = AreaEnterPoint.FindAreaEnterPointOnScene(area.AreaEnter).transform.position;
+                    pos.z -= 4;
+                    pos.x -= 2;
+                    return pos;
+                };
+                Maps.Add(map);
+            }
+            GauntletController.CurrentMap = Maps[0];
+
 
             //Never go to global map but I think it's required or the game will cry
             var globalMapLocation_dummy = BP.GetBlueprint<BlueprintGlobalMapPoint>("556d74cd8f75e674981862b10a84fa70");
             var initialPreset = BP.GetBlueprint<BlueprintAreaPreset>("b3e2cc3c1ccef09489209a20fde3fb72");
 
-            BGSprite = AssetLoader.LoadInternal("sprites", "gauntlet_loading.png", new Vector2Int(2048, 1024), TextureFormat.DXT5);
-
-            Main.LogNotNull("area", Area);
-            Main.LogNotNull("areaEnter", AreaEnter);
-            Main.LogNotNull("areaRE", areaRE);
-            Main.LogNotNull("location", globalMapLocation_dummy);
-            Main.LogNotNull("initialPreset", initialPreset);
-            Area.LoadingScreenSprites.Add(BGSprite);
-
-            Area.CampingSettings.CampingAllowed = false;
-
             var bp = Helpers.CreateBlueprint<BlueprintAreaPreset>("bubble-gauntlet-preset", null, preset => {
                 try {
-                    preset.m_Area = Area.ToReference<BlueprintAreaReference>();
-                    preset.m_EnterPoint = AreaEnter.ToReference<BlueprintAreaEnterPointReference>();
+                    preset.m_Area = Maps[0].Area.ToReference<BlueprintAreaReference>();
+                    preset.m_EnterPoint = Maps[0].AreaEnter.ToReference<BlueprintAreaEnterPointReference>();
                     preset.m_GlobalMapLocation = globalMapLocation_dummy.ToReference<BlueprintGlobalMapPoint.Reference>();
                     preset.m_OverrideGameDifficulty = initialPreset.m_OverrideGameDifficulty;
                     preset.m_PlayerCharacter = initialPreset.m_PlayerCharacter;
@@ -289,6 +359,7 @@ namespace BubbleGauntlet {
                     Main.Error(ex, "makign preset");
                 }
             });
+
 
             Main.Log("validating new game preset");
             bp.Validate();

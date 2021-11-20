@@ -1,5 +1,7 @@
 ﻿using Kingmaker.ElementsSystem;
+using Kingmaker.Enums.Damage;
 using Kingmaker.UnitLogic;
+using Kingmaker.Utility;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -24,6 +26,9 @@ namespace BubbleGauntlet {
 
     public class FloorState {
         [JsonProperty]
+        public DamageEnergyType DamageTheme;
+
+        [JsonProperty]
         public EncounterType[] Encounters = new EncounterType[10];
         [JsonProperty]
         public bool Shopping = false;
@@ -31,6 +36,8 @@ namespace BubbleGauntlet {
         public int TotalEncounters => 10;
         [JsonProperty]
         public int EncountersRemaining = 10;
+        [JsonProperty]
+        public int ActiveEncounter = -1;
 
         [JsonIgnore]
         public int EncountersCompleted => TotalEncounters - EncountersRemaining;
@@ -47,9 +54,11 @@ namespace BubbleGauntlet {
 
         public void Descend() {
             Level += 1;
+            DamageTheme = FUN.EnergyTypes.Random();
             foreach (var kv in Events)
                 kv.Value.Remaining = EncounterTemplate.Get(kv.Key).Count;
             EncountersRemaining = TotalEncounters;
+            ActiveEncounter = 0;
         }
 
         public FloorState() {

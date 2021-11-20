@@ -17,6 +17,13 @@ KoboldsEasy
 3 CR0_75_KoboldRangedWarriorLevel3_Alternative
 4 CR1_GiantSpiderStandard
 
+Kobolds2
+4 CR2_KoboldMeleeFighterLevel3
+2 CR2_KoboldAlchemistLevel3
+2 CR2_KoboldRangedFighterLevel3
+2 CR2_KoboldShamanEvokerLevel3
+2 CR2_KoboldShamanNecromancerLevel3
+
 DrowEasy
 5 CR0_3_Drow_Warrior_Male
 3 CR0_5_Drow_FighterMelee_Female
@@ -74,4 +81,19 @@ Bandits2
 Bandits1_2
 2 BanditsEasy
 1 Bandits2
+
+Wild1
+3 CR2_BoarStandard
+2 CR2_GiantFrogAdvanced
+2 CR2_LeopardStandard
+3 CR2_Elk
+1 CR2_MonitorLizardStandart
+2 CR2_MonitorLizardStandart_NoPoison
+2 CR2_WolfAdvanced
+1 CR2_WorgStandart
+
+Demon1
+2 CR2_CambionStandard_Melee
+4 CR2_CambionStandard_Ranged
+8 CR2_DretchStandard
 

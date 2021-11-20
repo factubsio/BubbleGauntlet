@@ -435,6 +435,7 @@ namespace BubbleGauntlet {
         private string text;
         private GameAction[] stopActions;
         private ConditionsChecker conditions = new();
+        private BlueprintUnitReference speaker;
 
         public CueBuilder(DialogBuilder root, string text) : base(root) {
             this.text = text;
@@ -457,7 +458,10 @@ namespace BubbleGauntlet {
                 cue.Continue.Cues = new();
                 cue.Text = Helpers.CreateString($"bubble-cue-{id}.text", text);
                 cue.Speaker = new();
-                cue.Speaker.NoSpeaker = true;
+                if (speaker == null)
+                    cue.Speaker.NoSpeaker = true;
+                else
+                    cue.Speaker.m_Blueprint = speaker;
                 cue.OnShow = new();
                 cue.OnStop = new();
                 if (stopActions != null)
@@ -466,6 +470,11 @@ namespace BubbleGauntlet {
                 cue.Conditions = conditions;
             });
             Complete();
+        }
+
+        internal CueBuilder Speaker(BlueprintUnitReference speaker) {
+            this.speaker = speaker;
+            return this;
         }
 
         internal CueBuilder ContinueWith(CheckBuilder with) {

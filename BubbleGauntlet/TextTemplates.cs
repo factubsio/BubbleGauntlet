@@ -58,7 +58,7 @@ namespace BubbleGauntlet {
                 if (level == 1 && val == GauntletController.Floor.TotalEncounters) {
                     return "Welcome to the Gauntlet of the bubble! Riches and more await...\n" +
                         "You must complete a number of encounters before continuing to the next floor\n" +
-                        "I can help with basic services like healing, for a fee...";
+                        "You can talk to my underling, Trumpet Girl, for a number of helpful services.";
                 } else {
                     return "Riches and more await...\n" +
                         "Are you ready to continue your quest?";

@@ -198,6 +198,10 @@ namespace BubbleGauntlet.Utilities {
             textToLocalizedString[value] = localized;
             return localized;
         }
+
+        public static LocalizedString EmptyString => CreateString("bubble-empty", "");
+
+
         public static FastRef<T, S> CreateFieldSetter<T, S>(string name) {
             return new FastRef<T, S>(HarmonyLib.AccessTools.FieldRefAccess<T, S>(HarmonyLib.AccessTools.Field(typeof(T), name)));
             //return new FastSetter<T, S>(HarmonyLib.FastAccess.CreateSetterHandler<T, S>(HarmonyLib.AccessTools.Field(typeof(T), name)));

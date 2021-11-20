@@ -98,6 +98,7 @@ namespace BubbleGauntlet {
     public abstract class EncounterGameAction : GameAction {
         protected FloorState State => GauntletController.Floor;
         protected EncounterTemplate Event;
+        protected virtual bool Instant => false;
 
         public EncounterGameAction(EncounterTemplate eventType) {
             Event = eventType;
@@ -110,6 +111,8 @@ namespace BubbleGauntlet {
         public override void RunAction() {
             if (Execute()) {
                 GauntletController.SetNextEncounter(Event.Type);
+                if (Instant)
+                    GauntletController.CompleteEncounter();
             }
         }
 
@@ -119,6 +122,8 @@ namespace BubbleGauntlet {
     public class RestEncounter : EncounterGameAction {
         public RestEncounter(EncounterTemplate type) : base(type) {
         }
+
+        protected override bool Instant => true;
 
         public override bool Execute() {
             foreach (var unit in Game.Instance.SelectionCharacter.ActualGroup) {
@@ -161,10 +166,7 @@ namespace BubbleGauntlet {
 
             var vendorBp = ContentManager.Vendors.Random();
 
-            var pos = AreaEnterPoint.FindAreaEnterPointOnScene(ContentManager.AreaEnter).transform.position;
-            pos.z -= 4;
-            pos.x -= 2;
-            var vendor = Game.Instance.EntityCreator.SpawnUnit(vendorBp, pos, Quaternion.identity, null);
+            var vendor = Game.Instance.EntityCreator.SpawnUnit(vendorBp, GauntletController.CurrentMap.VendorSpawnLocation, Quaternion.identity, null);
 
             RollTable<Weighted<(int biasDir, int biasAmount, string type)>> typeTable = new();
             foreach (var t in ContentManager.ItemTables.Keys) {

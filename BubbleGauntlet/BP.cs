@@ -65,5 +65,11 @@ namespace BubbleGauntlet {
                 Main.Log($"Asset ID: {assetId} already in use by: {loadedBlueprint.name}");
             }
         }
+
+        internal static T Ref<T>(string v) where T : BlueprintReferenceBase {
+            var tref = Activator.CreateInstance<T>();
+            tref.deserializedGuid = BlueprintGuid.Parse(v);
+            return tref;
+        }
     }
 }

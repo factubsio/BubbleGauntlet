@@ -93,6 +93,7 @@ namespace BubbleGauntlet {
             obj.localPosition = Vector3.zero;
             obj.localScale = Vector3.one;
             obj.localRotation = Quaternion.identity;
+            obj.Rect().anchoredPosition = Vector3.zero;
         }
 
         public static void FillParent(this RectTransform rect) {

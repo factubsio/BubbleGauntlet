@@ -474,6 +474,9 @@ namespace BubbleGauntlet.Extensions {
             feature.m_Description = Helpers.CreateString(feature.name + ".Description", description);
         }
 
+        
+
+
         public static void SetDescription(this BlueprintUnitFact feature, LocalizedString description) {
             feature.m_Description = description;
             //blueprintUnitFact_set_Description(feature) = description;

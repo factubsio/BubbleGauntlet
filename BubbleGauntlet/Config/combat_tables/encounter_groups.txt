@@ -19,8 +19,27 @@ BanditsEasy 1 3
 CultistsEasy 1 3
 3 CultistsEasy
 
+Wild1Easy 1 3
+4 Wild1
+
+Demon1Easy 1 3
+5 Demon1
+
 KoboldsEasy2 2 4
 6 KoboldsEasy
+
+KoboldsEasy2b 2 4
+4 KoboldsEasy
+2 Kobolds2
+
+Kobolds3 2 5
+3 KoboldsEasy
+2 Kobolds2
+
+Kobolds4 4 6
+2 KoboldsEasy
+4 Kobolds2
+4 Kobolds2
 
 MixedInsects1_2 2 4
 5 MixedInsects1
@@ -28,7 +47,14 @@ MixedInsects1_2 2 4
 CultistsEasy 2 4
 5 CultistsEasy
 
+Demon1Easy2 2 4
+7 Demon1
+
+Wild1Easy2 2 4
+6 Wild1
+
 Bandits2 2 5
 4 Bandits2
 3 BanditsEasy
+
 

@@ -1,5 +1,6 @@
 ﻿using Kingmaker;
 using Kingmaker.Blueprints;
+using Kingmaker.Blueprints.Classes;
 using Kingmaker.Blueprints.Root.Strings.GameLog;
 using Kingmaker.Designers;
 using Kingmaker.DialogSystem.Blueprints;
@@ -8,6 +9,7 @@ using Kingmaker.EntitySystem;
 using Kingmaker.EntitySystem.Entities;
 using Kingmaker.Localization;
 using Kingmaker.RandomEncounters.Settings;
+using Kingmaker.UnitLogic;
 using Kingmaker.UnitLogic.Abilities.Blueprints;
 using Kingmaker.Utility;
 using Kingmaker.View;
@@ -25,7 +27,9 @@ using static Kingmaker.QA.Statistics.ExperienceGainStatistic;
 namespace BubbleGauntlet {
     public static class GauntletController {
 
+        public static AreaMap CurrentMap;
 
+        public static UnitEntityData ServiceVendor;
         public static UnitEntityData Bubble;
         public static FloorState Floor;
         public static List<CombatEncounterTemplate> NormalFights = new();
@@ -59,6 +63,7 @@ namespace BubbleGauntlet {
             float encounterBudgetScale = UnityEngine.Random.Range(0.66f, 1.5f);
 
             List<string> Generated = new();
+            UnitEntityData last = null;
 
             foreach (var toSpawn in template.GetMonsters(encounterBudgetScale)) {
                 var unitBp = BP.GetBlueprint<BlueprintUnit>(toSpawn.ToString());
@@ -66,7 +71,6 @@ namespace BubbleGauntlet {
                 Generated.Add(unitBp.CharacterName);
 
                 for (int i = 0; i < 8; i++) {
-
                     var rand = UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(2.5f, 5);
                     rand.y = 0;
 
@@ -80,6 +84,9 @@ namespace BubbleGauntlet {
 
                 var unit = Game.Instance.EntityCreator.SpawnUnit(unitBp, pos, Quaternion.identity, null);
 
+                //if (Floor.Level > 2)
+                unit.AddFact(FUN.ExtraDamageFact);
+
                 //if (AstarPath.active) {
                 //    FreePlaceSelector.PlaceSpawnPlaces(2, Math.Max(unit.View.Corpulence, 4.0f) * 2.0f, center);
                 //    pos = FreePlaceSelector.GetRelaxedPosition(1, true);
@@ -88,6 +95,17 @@ namespace BubbleGauntlet {
 
                 unit.LookAt(Game.Instance.Player.Position);
                 unit.GroupId = "bubble-encounter";
+                last = unit;
+            }
+
+            if (last != null) {
+                Main.Log("Making elite...");
+                Main.Log($" CL: {last.Progression.CharacterLevel}, MAXCL: {last.Progression.MaxCharacterLevel}, MAXACL: {last.Progression.MaxAvailableCharacterLevel}");
+                //last.Progression.CharacterLevel += 3;
+                var ogName = last.Descriptor.CharacterName;
+                last.Descriptor.CustomName = $"Slightly Bubbly {ogName}";
+                AddClassLevels.LevelUp(FUN.AddBubblyLevels, last.Descriptor, D.Roll(Floor.Level + 1));
+                Main.Log("Done");
             }
 
             Main.CombatLog($"Combat encounter generated", GameLogStrings.Instance.DefaultColor, new TooltipTemplateEncounterGen {
@@ -99,9 +117,17 @@ namespace BubbleGauntlet {
         
         public static void CreateBubbleMaster() {
             Game.Instance.Player.Money = 2000;
-            var bubblePosition = AreaEnterPoint.FindAreaEnterPointOnScene(ContentManager.AreaEnter).transform.position;
+            var bubblePosition = AreaEnterPoint.FindAreaEnterPointOnScene(CurrentMap.AreaEnter).transform.position;
             bubblePosition.z -= 4;
             Bubble = Game.Instance.EntityCreator.SpawnUnit(ContentManager.BubbleMasterBlueprint, bubblePosition, Quaternion.identity, null);
+            bubblePosition.x += 2;
+            ServiceVendor = Game.Instance.EntityCreator.SpawnUnit(ContentManager.ServiceVendorBlueprint, bubblePosition, Quaternion.identity, null);
+            ServiceVendor.State.Size = Kingmaker.Enums.Size.Small;
+        }
+
+        internal static void CompleteEncounter() {
+            //Floor.ActiveEncounter++;
+            //ProgressIndicator.Refresh();
         }
 
         internal static void SetNextEncounter(EncounterType type) {
@@ -118,11 +144,14 @@ namespace BubbleGauntlet {
             Main.Log("HideBubble (Fade)");
             Bubble.View.FadeHide();
             Bubble.IsInGame = false;
+            ServiceVendor.View.FadeHide();
+            ServiceVendor.IsInGame = false;
         }
 
         internal static void ShowBubble() {
             Main.Log("ShowBubble");
             Bubble.IsInGame = true;
+            ServiceVendor.IsInGame = true;
         }
 
         internal static void Descend() {
@@ -132,20 +161,26 @@ namespace BubbleGauntlet {
         internal static void LoadCheck() {
             Floor = Game.Instance.Player.Ensure<Gauntlet>().Floor;
 
-            var bubble = Game.Instance.State.LoadedAreaState.GetAllSceneStates()
+            Main.Log("Floor state initialised/loaded");
+
+            Bubble = null;
+            ServiceVendor = null;
+
+            foreach (var unit in Game.Instance.State.LoadedAreaState.GetAllSceneStates()
                                                   .Where(state => state.IsSceneLoaded)
                                                   .SelectMany(state => state.AllEntityData)
-                                                  .OfType<UnitEntityData>()
-                                                  .FirstOrDefault(u => u.Blueprint == ContentManager.BubbleMasterBlueprint);
+                                                  .OfType<UnitEntityData>()) {
+                if (unit.Blueprint == ContentManager.BubbleMasterBlueprint)
+                    Bubble = unit;
+                else if (unit.Blueprint == ContentManager.ServiceVendorBlueprint)
+                    ServiceVendor = unit;
+            }
 
-            if (bubble == null) {
+            if (Bubble == null) {
                 //new game
                 Main.Log("Could not find bubble, creating new");
                 GauntletController.CreateBubbleMaster();
-            } else {
-                Main.Log("Latching existing bubble");
-                GauntletController.Bubble = bubble;
-            }
+            } 
 
             Game.Instance.Player.ExperienceRatePercent = 100;
 
@@ -158,9 +193,12 @@ namespace BubbleGauntlet {
             if (GauntletController.Vendor != null) {
                 Main.Log("Restoring a vendor");
             }
+            ProgressIndicator.Refresh();
         }
 
         internal static void ExitCombat() {
+
+            CompleteEncounter();
 
             int exp = FightExperience(Floor.Level);
             GameHelper.GainExperience(exp, null, GainType.Mob);
