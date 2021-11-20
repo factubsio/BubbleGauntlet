@@ -285,6 +285,7 @@ namespace BubbleGauntlet {
         public static void InstallGauntletContent() {
             Main.Log("Initializing Gauntlet Blueprints");
 
+            FUN.Install();
             CreateVendorBlueprints();
             CreateBubbleDialog();
 

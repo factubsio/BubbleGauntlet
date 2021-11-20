@@ -87,6 +87,7 @@ namespace BubbleGauntlet {
                 //if (Floor.Level > 2)
                 unit.AddFact(FUN.ExtraDamageFact);
 
+
                 //if (AstarPath.active) {
                 //    FreePlaceSelector.PlaceSpawnPlaces(2, Math.Max(unit.View.Corpulence, 4.0f) * 2.0f, center);
                 //    pos = FreePlaceSelector.GetRelaxedPosition(1, true);
@@ -104,7 +105,9 @@ namespace BubbleGauntlet {
                 //last.Progression.CharacterLevel += 3;
                 var ogName = last.Descriptor.CharacterName;
                 last.Descriptor.CustomName = $"Slightly Bubbly {ogName}";
-                AddClassLevels.LevelUp(FUN.AddBubblyLevels, last.Descriptor, D.Roll(Floor.Level + 1));
+                Main.LogNotNull("bubbleylevels", FUN.AddBubblyLevels);
+                Main.LogNotNull("bubbleylevels.class", FUN.AddBubblyLevels.CharacterClass);
+                AddClassLevels.LevelUp(FUN.AddBubblyLevels, last.Descriptor, D.Roll(Floor.Level + 2));
                 Main.Log("Done");
             }
 
@@ -126,8 +129,8 @@ namespace BubbleGauntlet {
         }
 
         internal static void CompleteEncounter() {
-            //Floor.ActiveEncounter++;
-            //ProgressIndicator.Refresh();
+            Floor.ActiveEncounter++;
+            ProgressIndicator.Refresh();
         }
 
         internal static void SetNextEncounter(EncounterType type) {
@@ -152,6 +155,7 @@ namespace BubbleGauntlet {
             Main.Log("ShowBubble");
             Bubble.IsInGame = true;
             ServiceVendor.IsInGame = true;
+            Main.Log("Showing service vendor???");
         }
 
         internal static void Descend() {

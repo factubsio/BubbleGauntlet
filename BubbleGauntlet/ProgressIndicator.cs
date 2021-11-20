@@ -36,6 +36,7 @@ namespace BubbleGauntlet {
         private static Sprite shop;
         private static Sprite maskSprite;
         private static Sprite borderSprite;
+        private static Sprite borderActiveSprite;
         private static Sprite stairSprite;
 
         public static bool Visible {
@@ -59,7 +60,8 @@ namespace BubbleGauntlet {
             shop = AssetLoader.LoadInternal("sprites", "UI_HudIcon_Pack_Default.png", new Vector2Int(106, 106), TextureFormat.ARGB32);
             maskSprite = AssetLoader.LoadInternal("sprites", "UI_CircleMask256.png", new Vector2Int(256, 256), TextureFormat.ARGB32);
 
-            borderSprite = AssetLoader.LoadInternal("sprites", "circle_border.png", new Vector2Int(108, 108), TextureFormat.ARGB32);
+            borderSprite = AssetLoader.LoadInternal("sprites", "border.png", new Vector2Int(211, 211), TextureFormat.ARGB32);
+            borderActiveSprite = AssetLoader.LoadInternal("sprites", "border_active.png", new Vector2Int(210, 230), TextureFormat.ARGB32);
 
             stairSprite = AssetLoader.LoadInternal("sprites", "stair.png", new Vector2Int(128, 128), TextureFormat.ARGB32);
 
@@ -151,7 +153,7 @@ namespace BubbleGauntlet {
                 var inset = new GameObject("inset", typeof(RectTransform));
 
                 inset.AddTo(encounter);
-                inset.Rect().SetAnchor(0.2, 0.8, 0.2, 0.8);
+                inset.Rect().SetAnchor(0.16, 0.84, 0.16, 0.84);
                 inset.Rect().sizeDelta = Vector2.zero;
 
 
@@ -161,22 +163,27 @@ namespace BubbleGauntlet {
                 mask.AddTo(inset);
                 mask.FillParent();
 
+
                 var icon = new GameObject("icon-icon", typeof(RectTransform));
                 icon.AddTo(mask);
                 icon.FillParent();
                 icon.Rect().SetAnchor(-.1, 1.1, -.1, 1.1);
-                Encounters[i].Main = icon.AddComponent<Image>();
-                Encounters[i].Main.sprite = null;
-                Encounters[i].Main.color = Color.gray;
+                var mainImage = icon.AddComponent<Image>();
+                mainImage.sprite = null;
+                mainImage.color = Color.gray;
 
                 var border = new GameObject("borderb", typeof(RectTransform));
-                Encounters[i].Border = border.AddComponent<Image>();
-                Encounters[i].Border.sprite = borderSprite;
-                Encounters[i].Border.color = Color.gray;
+                var aspect = border.AddComponent<AspectRatioFitter>();
+                aspect.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
+                aspect.aspectRatio = 210.0f / 230.0f;
+                var borderImage = border.AddComponent<Image>();
+                borderImage.sprite = borderSprite;
+                borderImage.color = Color.gray;
                 border.AddTo(inset);
                 border.FillParent();
                 border.Rect().SetAnchor(-.1, 1.1, -.1, 1.1);
 
+                Encounters[i] = new(mainImage, borderImage);
 
                 encounter.AddTo(contents);
             }
@@ -188,24 +195,31 @@ namespace BubbleGauntlet {
             CurrentFloorLabel.text = state.Level.ToString();
             CurrentThemeLabel.text = UIUtilityTexts.GetSingleEnergyTextSymbol(state.DamageTheme);
             for (int i = 0; i < 10; i++) {
+                EncounterChupa chupa = Encounters[i];
                 if (i >= state.EncountersCompleted) {
-                    Encounters[i].Main = null;
-                    Encounters[i].Main.color = Color.gray;
+                    chupa.Main.sprite = null;
+                    chupa.Main.color = Color.gray;
                 } else {
-                    Encounters[i].Main.sprite = state.Encounters[i] switch {
+                    chupa.Main.sprite = state.Encounters[i] switch {
                         EncounterType.Fight => fight,
                         EncounterType.EliteFight => fight,
                         EncounterType.Rest => rest,
                         EncounterType.Shop => shop,
                         _ => null,
                     };
-                    Encounters[i].Main.color = Color.white;
+                    chupa.Main.color = Color.white;
                 }
 
-                if (i == state.ActiveEncounter)
-                    Encounters[i].Border.color = Color.yellow;
-                else
-                    Encounters[i].Border.color = Color.white;
+                var aspect = chupa.Border.GetComponent<AspectRatioFitter>();
+                if (i == state.ActiveEncounter) {
+                    chupa.Border.color = Color.yellow;
+                    chupa.Border.sprite = borderActiveSprite;
+                    aspect.aspectRatio = 210.0f / 230.0f;
+                } else {
+                    chupa.Border.color = Color.white;
+                    chupa.Border.sprite = borderSprite;
+                    aspect.aspectRatio = 1;
+                }
             }
         }
 
@@ -246,13 +260,13 @@ namespace BubbleGauntlet {
 
     public class NullBehaviour : MonoBehaviour { }
 
-    internal struct EncounterChupa {
-        public Image Main;
-        public Image Border;
+    internal class EncounterChupa {
+        public readonly Image Main;
+        public readonly Image Border;
 
-        public EncounterChupa(Image sprite, Image border) {
-            this.Main = sprite;
-            this.Border = border;
+        public EncounterChupa(Image main, Image border) {
+            Main = main;
+            Border = border;
         }
 
         public override bool Equals(object obj) {
@@ -275,10 +289,6 @@ namespace BubbleGauntlet {
 
         public static implicit operator (Image sprite, Image border)(EncounterChupa value) {
             return (value.Main, value.Border);
-        }
-
-        public static implicit operator EncounterChupa((Image sprite, Image border) value) {
-            return new EncounterChupa(value.sprite, value.border);
         }
     }
 }

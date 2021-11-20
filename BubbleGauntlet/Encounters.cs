@@ -109,10 +109,14 @@ namespace BubbleGauntlet {
         }
 
         public override void RunAction() {
-            if (Execute()) {
-                GauntletController.SetNextEncounter(Event.Type);
-                if (Instant)
-                    GauntletController.CompleteEncounter();
+            try {
+                if (Execute()) {
+                    GauntletController.SetNextEncounter(Event.Type);
+                    if (Instant)
+                        GauntletController.CompleteEncounter();
+                }
+            } catch (Exception ex) {
+                Main.Error(ex, "running encounter action");
             }
         }
 

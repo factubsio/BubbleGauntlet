@@ -79,6 +79,7 @@ namespace BubbleGauntlet {
         };
 
         public static void Install() {
+            Main.Log("Installing FUN");
             var bseClass = Helpers.CreateBlueprint<BlueprintCharacterClass>("bubble-standard-elite", cls => {
                 cls.ClassSkills = new StatType[] {
                     StatType.SkillMobility,
@@ -88,7 +89,7 @@ namespace BubbleGauntlet {
                 cls.LocalizedDescriptionShort = Helpers.CreateString("bse-desc.short", "A bubblier than normal monster");
                 cls.LocalizedName = Helpers.CreateString("bse-name", "Bubbly");
                 cls.m_Difficulty = 1;
-                cls.HitDie = Kingmaker.RuleSystem.DiceType.D10;
+                cls.HitDie = Kingmaker.RuleSystem.DiceType.D12;
                 cls.m_WillSave = BP.Ref<BlueprintStatProgressionReference>("ff4662bde9e75f145853417313842751");             //high
                 cls.m_FortitudeSave = BP.Ref<BlueprintStatProgressionReference>("ff4662bde9e75f145853417313842751");        //high
                 cls.m_ReflexSave = BP.Ref<BlueprintStatProgressionReference>("ff4662bde9e75f145853417313842751");           //high
@@ -142,6 +143,8 @@ namespace BubbleGauntlet {
                 dmg.Groups = Array.Empty<FeatureGroup>();
                 dmg.AddComponent<GauntletAdditionalDamage>();
             });
+
+            Main.Log("FUN has been installed");
 
         }
     }
