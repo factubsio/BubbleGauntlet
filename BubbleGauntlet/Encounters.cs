@@ -170,7 +170,10 @@ namespace BubbleGauntlet {
 
             var vendorBp = ContentManager.Vendors.Random();
 
-            var vendor = Game.Instance.EntityCreator.SpawnUnit(vendorBp, GauntletController.CurrentMap.VendorSpawnLocation, Quaternion.identity, null);
+            var (pos, look) = GauntletController.CurrentMap.VendorSpawnLocation;
+
+            var vendor = Game.Instance.EntityCreator.SpawnUnit(vendorBp, pos, Quaternion.identity, null);
+            vendor.LookAt(pos + look);
 
             RollTable<Weighted<(int biasDir, int biasAmount, string type)>> typeTable = new();
             foreach (var t in ContentManager.ItemTables.Keys) {

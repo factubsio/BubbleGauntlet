@@ -233,16 +233,20 @@ namespace BubbleGauntlet {
         void IAreaHandler.OnAreaBeginUnloading() { }
 
         void IAreaActivationHandler.OnAreaActivated() {
+            try {
 
-            ProgressIndicator.Install();
-            GauntletController.LoadCheck();
+                ProgressIndicator.Install();
+                GauntletController.InstallGauntletController();
+            } catch (Exception e) {
+                Main.Error(e, "area-activated");
+            }
 
             Main.Log("Removing all exits");
             foreach (var entity in Game.Instance.State.LoadedAreaState.GetAllSceneStates()
                                                                       .Where(state => state.IsSceneLoaded)
                                                                       .SelectMany(state => state.AllEntityData)
                                                                       .OfType<MapObjectEntityData>()
-                                                                      .Where(mapObject => mapObject.Parts.Get<AreaTransitionPart>() != null)) {
+                                                                      .Where(mapObject => mapObject.Parts.Get<InteractionDoorPart>() == null)) {
                 entity.MarkForDestroy();
             }
 
@@ -300,11 +304,10 @@ namespace BubbleGauntlet {
             }
             if (Input.GetKeyDown(KeyCode.D) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
                 //DialogTester.Run();
-                ContentManager.InstallGauntletContent();
+                //ContentManager.InstallGauntletContent();
             }
             if (Input.GetKeyDown(KeyCode.L) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
                 CleanUpArena();
-                GauntletController.Bubble?.MarkForDestroy();
             }
             if (Input.GetKeyDown(KeyCode.K) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
                 ProgressIndicator.Install();
@@ -320,7 +323,7 @@ namespace BubbleGauntlet {
             foreach (SceneEntitiesState sceneEntitiesState in Game.Instance.LoadedAreaState.GetAllSceneStates()) {
                 if (sceneEntitiesState.IsSceneLoaded) {
                     foreach (EntityDataBase entityData in sceneEntitiesState.AllEntityData) {
-                        if (entityData is UnitEntityData unitEntityData && !unitEntityData.IsPlayerFaction && unitEntityData != GauntletController.Bubble) {
+                        if (entityData is UnitEntityData unitEntityData && !unitEntityData.IsPlayerFaction && unitEntityData != GauntletController.Bubble && unitEntityData != GauntletController.ServiceVendor) {
                             entityData.MarkForDestroy();
                         }
                     }

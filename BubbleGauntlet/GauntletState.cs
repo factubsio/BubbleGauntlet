@@ -35,7 +35,7 @@ namespace BubbleGauntlet {
         [JsonProperty]
         public int TotalEncounters => 10;
         [JsonProperty]
-        public int EncountersRemaining = 10;
+        public int EncountersRemaining = 0;
         [JsonProperty]
         public int ActiveEncounter = -1;
 
@@ -49,7 +49,7 @@ namespace BubbleGauntlet {
             { EncounterType.Fight, new EncounterState { Remaining = 8 } },
             { EncounterType.EliteFight, new EncounterState { Remaining = 3 } },
             { EncounterType.Shop, new EncounterState { Remaining = 2 } },
-            { EncounterType.Rest, new EncounterState { Remaining = 2 } },
+            { EncounterType.Rest, new EncounterState { Remaining = 4 } },
         };
 
         public void Descend() {

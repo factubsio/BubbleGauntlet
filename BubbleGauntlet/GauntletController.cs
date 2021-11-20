@@ -3,26 +3,17 @@ using Kingmaker.Blueprints;
 using Kingmaker.Blueprints.Classes;
 using Kingmaker.Blueprints.Root.Strings.GameLog;
 using Kingmaker.Designers;
-using Kingmaker.DialogSystem.Blueprints;
-using Kingmaker.ElementsSystem;
 using Kingmaker.EntitySystem;
 using Kingmaker.EntitySystem.Entities;
-using Kingmaker.Localization;
-using Kingmaker.RandomEncounters.Settings;
 using Kingmaker.UnitLogic;
-using Kingmaker.UnitLogic.Abilities.Blueprints;
 using Kingmaker.Utility;
 using Kingmaker.View;
-using Kingmaker.View.MapObjects;
-using Newtonsoft.Json;
-using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
+using BubbleGauntlet.Extensions;
 using static Kingmaker.QA.Statistics.ExperienceGainStatistic;
+using Kingmaker.UnitLogic.FactLogic;
 
 namespace BubbleGauntlet {
     public static class GauntletController {
@@ -56,11 +47,11 @@ namespace BubbleGauntlet {
         public static void InstantiateCombatTemplate(CombatEncounterTemplate template) {
 
             Main.CleanUpArena();
-            var center = new Vector3(25f, 40f, 45f);
+            var (center, look) = CurrentMap.CombatLocation;
 
             List<Vector3> existing = new();
 
-            float encounterBudgetScale = UnityEngine.Random.Range(0.66f, 1.5f);
+            float encounterBudgetScale = UnityEngine.Random.Range(0.9f, 1.8f);
 
             List<string> Generated = new();
             UnitEntityData last = null;
@@ -85,8 +76,12 @@ namespace BubbleGauntlet {
                 var unit = Game.Instance.EntityCreator.SpawnUnit(unitBp, pos, Quaternion.identity, null);
 
                 //if (Floor.Level > 2)
-                unit.AddFact(FUN.ExtraDamageFact);
-
+                unit.Facts.RemoveAll<EntityFact>(fact => {
+                    if (fact.Blueprint.HasComponent<AddEnergyImmunity>())
+                        return true;
+                    return false;
+                });
+                unit.AddBuff(FUN.ThemeBuffs[Floor.DamageTheme], unit);
 
                 //if (AstarPath.active) {
                 //    FreePlaceSelector.PlaceSpawnPlaces(2, Math.Max(unit.View.Corpulence, 4.0f) * 2.0f, center);
@@ -94,7 +89,7 @@ namespace BubbleGauntlet {
                 //    unit.Position = pos;
                 //}
 
-                unit.LookAt(Game.Instance.Player.Position);
+                unit.LookAt(pos + look);
                 unit.GroupId = "bubble-encounter";
                 last = unit;
             }
@@ -108,6 +103,7 @@ namespace BubbleGauntlet {
                 Main.LogNotNull("bubbleylevels", FUN.AddBubblyLevels);
                 Main.LogNotNull("bubbleylevels.class", FUN.AddBubblyLevels.CharacterClass);
                 AddClassLevels.LevelUp(FUN.AddBubblyLevels, last.Descriptor, D.Roll(Floor.Level + 2));
+                last.AddBuff(FUN.BubblyBuffVisual, last);
                 Main.Log("Done");
             }
 
@@ -120,12 +116,29 @@ namespace BubbleGauntlet {
         
         public static void CreateBubbleMaster() {
             Game.Instance.Player.Money = 2000;
-            var bubblePosition = AreaEnterPoint.FindAreaEnterPointOnScene(CurrentMap.AreaEnter).transform.position;
-            bubblePosition.z -= 4;
+            var (bubblePosition, bubbleLook) = CurrentMap.BubbleLocation;
             Bubble = Game.Instance.EntityCreator.SpawnUnit(ContentManager.BubbleMasterBlueprint, bubblePosition, Quaternion.identity, null);
-            bubblePosition.x += 2;
-            ServiceVendor = Game.Instance.EntityCreator.SpawnUnit(ContentManager.ServiceVendorBlueprint, bubblePosition, Quaternion.identity, null);
+            Bubble.LookAt(bubblePosition + bubbleLook);
+
+            var (servicePos, serviceLook) = CurrentMap.ServiceLocation;
+            ServiceVendor = Game.Instance.EntityCreator.SpawnUnit(ContentManager.ServiceVendorBlueprint, servicePos, Quaternion.identity, null);
+            ServiceVendor.LookAt(servicePos + serviceLook);
             ServiceVendor.State.Size = Kingmaker.Enums.Size.Small;
+
+            //int index = 0;
+            //float start_x = bubblePosition.x - 2;
+            //bubblePosition.z += 3;
+            //foreach (var kv in FUN.ThemeBuffs) {
+            //    bubblePosition.x = start_x + index * 1.2f;
+            //    var dummy = Game.Instance.EntityCreator.SpawnUnit(ContentManager.BubbleMasterBlueprint, bubblePosition, Quaternion.identity, null);
+            //    dummy.Descriptor.CustomName = $"{kv.Key} Bubble";
+            //    dummy.AddBuff(kv.Value, dummy);
+            //    if (index++ == 4) {
+            //        bubblePosition.z += 1.5f;
+            //        index = 0;
+            //    }
+
+            //}
         }
 
         internal static void CompleteEncounter() {
@@ -158,12 +171,9 @@ namespace BubbleGauntlet {
             Main.Log("Showing service vendor???");
         }
 
-        internal static void Descend() {
-            Game.Instance.DialogController.StartDialogWithoutTarget(ContentManager.DescendDialog, ContentManager.DescendSpeaker);
-        }
-
-        internal static void LoadCheck() {
+        internal static void InstallGauntletController() {
             Floor = Game.Instance.Player.Ensure<Gauntlet>().Floor;
+            CurrentMap = ContentManager.MapForArea(Game.Instance.CurrentlyLoadedArea.AssetGuid.m_Guid);
 
             Main.Log("Floor state initialised/loaded");
 
@@ -178,6 +188,8 @@ namespace BubbleGauntlet {
                     Bubble = unit;
                 else if (unit.Blueprint == ContentManager.ServiceVendorBlueprint)
                     ServiceVendor = unit;
+                else if (unit.GroupId != "bubble-encounter" && unit.Blueprint.Speed.Value != 5)
+                    unit.MarkForDestroy();
             }
 
             if (Bubble == null) {

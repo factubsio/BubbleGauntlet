@@ -455,6 +455,7 @@ namespace BubbleGauntlet.Extensions {
         public static void SetNameDescription(this BlueprintUnitFact feature, String displayName, String description) {
             feature.SetName(Helpers.CreateString(feature.name + ".Name", displayName));
             feature.SetDescription(description);
+            feature.SetDescriptionShort(description);
         }
 
         public static void SetNameDescription(this BlueprintUnitFact feature, BlueprintUnitFact other) {
@@ -480,6 +481,11 @@ namespace BubbleGauntlet.Extensions {
         public static void SetDescription(this BlueprintUnitFact feature, LocalizedString description) {
             feature.m_Description = description;
             //blueprintUnitFact_set_Description(feature) = description;
+        }
+
+        public static void SetDescriptionShort(this BlueprintUnitFact feature, String description) {
+            var taggedDescription = DescriptionTools.TagEncyclopediaEntries(description);
+            feature.m_DescriptionShort = Helpers.CreateString(feature.name + ".DescriptionShort", taggedDescription);
         }
 
         public static void SetDescription(this BlueprintUnitFact feature, String description) {

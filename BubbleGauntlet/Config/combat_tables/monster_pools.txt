@@ -17,6 +17,9 @@ KoboldsEasy
 3 CR0_75_KoboldRangedWarriorLevel3_Alternative
 4 CR1_GiantSpiderStandard
 
+Spiders1
+2 CR1_GiantSpiderStandard
+
 Kobolds2
 4 CR2_KoboldMeleeFighterLevel3
 2 CR2_KoboldAlchemistLevel3
@@ -44,6 +47,17 @@ BanditsEasy
 1 CR1_Bandit_Human_Transmuter_Male
 1 CR1_Bandit_Human_RogueMelee_Male
 1 CR1_Bandit_Human_RogueRanged_Male
+
+BanditsEasyA
+8 CR1_Bandit_Human_FighterMelee_Male2
+4 CR1_Bandit_Human_RogueMelee_Male
+4 CR1_Bandit_Human_RogueRanged_Male
+
+BanditsEasyB
+8 CR1_Bandit_Human_FighterMelee_Male2
+8 CR1_Bandit_Human_FighterMelee_Male
+4 CR1_Bandit_Human_Bard_Male
+4 CR1_Bandit_Human_Illusionist_Male
 
 CultistsEasy
 5 CR1_Cultist_Baphomet_Melee

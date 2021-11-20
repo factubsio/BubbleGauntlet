@@ -11,16 +11,23 @@ KoboldsEasy 1 3
 4 KoboldsEasy
 
 DrowEasy 1 3
-3 DrowEasy
+4 DrowEasy
+1 Spiders1
 
 BanditsEasy 1 3
-3 BanditsEasy
+4 BanditsEasy
+
+BanditsEasyA 1 3
+4 BanditsEasyA
+
+BanditsEasyB 1 3
+4 BanditsEasyB
 
 CultistsEasy 1 3
 3 CultistsEasy
 
 Wild1Easy 1 3
-4 Wild1
+5 Wild1
 
 Demon1Easy 1 3
 5 Demon1
@@ -56,5 +63,13 @@ Wild1Easy2 2 4
 Bandits2 2 5
 4 Bandits2
 3 BanditsEasy
+
+Bandits2A 2 5
+4 Bandits2
+3 BanditsEasyA
+
+Bandits2B 2 5
+4 Bandits2
+3 BanditsEasyB
 
 

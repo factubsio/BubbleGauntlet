@@ -132,11 +132,7 @@ namespace BubbleGauntlet {
 
         public override void RunAction() {
             Main.Log("Descending");
-            //Game.Instance.DialogController.StartDialogWithoutTarget(DescendDialog, DescendSpeaker);
-
-            Main.CombatLog($"The party descends to level {GauntletController.Floor.Level + 1}");
-
-            GauntletController.Descend();
+            Game.Instance.DialogController.StartDialogWithoutTarget(ContentManager.DescendDialog, ContentManager.DescendSpeaker);
         }
     }
 
