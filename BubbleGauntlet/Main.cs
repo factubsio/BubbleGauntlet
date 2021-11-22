@@ -94,6 +94,10 @@ namespace BubbleGauntlet {
         public static Condition Invert(this Condition cond) {
             return new InvertedCondition(cond);
         }
+        public static Condition Not(this Condition cond) {
+            cond.Not = true;
+            return cond;
+        }
         public static string ToTag(this string str) {
             return '{' + str + '}';
         }

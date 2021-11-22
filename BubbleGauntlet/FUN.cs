@@ -1,4 +1,5 @@
-﻿using BubbleGauntlet.Extensions;
+﻿using BubbleGauntlet.BlueprintCore.Utils;
+using BubbleGauntlet.Extensions;
 using BubbleGauntlet.Utilities;
 using HarmonyLib;
 using Kingmaker;
@@ -46,11 +47,9 @@ namespace BubbleGauntlet {
 
         public override bool IsStackable => true;
 
-        //public override int CalculateValue(ComponentRuntime runtime) {
-        //    int val = 5 + GauntletController.Floor.Level / 2;
-        //    Main.Log($"calculated dr: {val}");
-        //    return 35;
-        //}
+        public override int CalculateValue(ComponentRuntime runtime) {
+            return 3 + GauntletController.Floor.Level / 2;
+        }
 
     }
 
@@ -393,38 +392,37 @@ namespace BubbleGauntlet {
                 buff.SetNameDescription("Bubbly", "The bubbles infuse this monster with extra-planar might");
             });
 
-            var area = BP.GetBlueprint<BlueprintAbilityAreaEffect>("3659ce23ae102ca47a7bf3a30dd98609");
-            area.Size = 5.Feet();
+            //var area = BP.GetBlueprint<BlueprintAbilityAreaEffect>("3659ce23ae102ca47a7bf3a30dd98609");
+            //area.Size = 5.Feet();
 
-
-            SpawnPool = Helpers.CreateBlueprint<BlueprintAbility>("bubble-pool", pool => {
-                pool.SetNameDescription("Bubble chain", "A bubbling pool of thematic energy");
-                pool.Range = AbilityRange.Long;
-                pool.CanTargetPoint = true;
-                pool.EffectOnEnemy = AbilityEffectOnUnit.Harmful;
-                pool.Animation = CastAnimationStyle.Point;
-                pool.Type = AbilityType.Supernatural;
-                pool.LocalizedDuration = Helpers.EmptyString;
-                pool.LocalizedSavingThrow = Helpers.EmptyString;
-                pool.MaterialComponent = new();
-                pool.DisableLog = true;
-                pool.AddComponent<AbilityEffectRunAction>(run => {
-                    run.Actions = Helpers.CreateActionList(
-                        new ContextActionSpawnAreaEffect {
-                            m_AreaEffect = BP.Ref<BlueprintAbilityAreaEffectReference>("3659ce23ae102ca47a7bf3a30dd98609"),
-                            DurationValue = new() {
-                                Rate = Kingmaker.UnitLogic.Mechanics.DurationRate.Minutes,
-                                m_IsExtendable = true,
-                                DiceCountValue = new() { },
-                                BonusValue = new() {
-                                    Value = 100,
-                                    ValueType = Kingmaker.UnitLogic.Mechanics.ContextValueType.Simple,
-                                }
-                            },
-                        }
-                    );
-                });
-            });
+            //SpawnPool = Helpers.CreateBlueprint<BlueprintAbility>("bubble-pool", pool => {
+            //    pool.SetNameDescription("Bubble chain", "A bubbling pool of thematic energy");
+            //    pool.Range = AbilityRange.Long;
+            //    pool.CanTargetPoint = true;
+            //    pool.EffectOnEnemy = AbilityEffectOnUnit.Harmful;
+            //    pool.Animation = CastAnimationStyle.Point;
+            //    pool.Type = AbilityType.Supernatural;
+            //    pool.LocalizedDuration = Helpers.EmptyString;
+            //    pool.LocalizedSavingThrow = Helpers.EmptyString;
+            //    pool.MaterialComponent = new();
+            //    pool.DisableLog = true;
+            //    pool.AddComponent<AbilityEffectRunAction>(run => {
+            //        run.Actions = Helpers.CreateActionList(
+            //            new ContextActionSpawnAreaEffect {
+            //                m_AreaEffect = BP.Ref<BlueprintAbilityAreaEffectReference>("3659ce23ae102ca47a7bf3a30dd98609"),
+            //                DurationValue = new() {
+            //                    Rate = Kingmaker.UnitLogic.Mechanics.DurationRate.Minutes,
+            //                    m_IsExtendable = true,
+            //                    DiceCountValue = new() { },
+            //                    BonusValue = new() {
+            //                        Value = 100,
+            //                        ValueType = Kingmaker.UnitLogic.Mechanics.ContextValueType.Simple,
+            //                    }
+            //                },
+            //            }
+            //        );
+            //    });
+            //});
 
             var chain = Helpers.CreateBlueprint<BlueprintAbility>("bubble-chain", chain => {
                 chain.SetNameDescription("Bubble chain", "Chains of bubbly power");
@@ -508,7 +506,7 @@ namespace BubbleGauntlet {
                 });
             });
             NovaOnMiss = TriggerOn(Nova, TriggerType.OnlyMiss, TriggerOnUnit.Self, "Bubbling Miss", "Missing is no obstacle to a determined bubble! This monster explodes with thematic energy when it misses with an attack.");
-            ConeOnAny = TriggerOn(Cone, TriggerType.HitOrMiss, TriggerOnUnit.Target, "Bubbling Spread", "This bubble splashes thematic energy across the battlefield on every attack, hit or miss!");
+            ConeOnAny = TriggerOn(Cone, TriggerType.HitOrMiss, TriggerOnUnit.Target, "Bubbling Splash", "This bubble splashes thematic energy across the battlefield on every attack, hit or miss!");
             ChainOnHit = TriggerOn(chain, TriggerType.OnlyHit, TriggerOnUnit.Target, "Bubbling Chain", "Sometimes a bubble likes to make the worst case even worse... On hit this monster will chain thematic energy through your entire party.");
 
             EliteAttacks.Add(NovaOnMiss);
@@ -518,10 +516,7 @@ namespace BubbleGauntlet {
 
             var vanguardActualBuff = Helpers.CreateBlueprint<BlueprintBuff>("bubblegauntlet-vanguard-targetbuff", buff => {
                 buff.SetNameDescription("Bubble Shielded", "This bubble is under the protection of an elite and has DR/- equal to (3 + Floor/2).");
-                buff.AddComponent<VanguardDamageResistance>(dr => {
-                    dr.Value.Value = 80;
-                    dr.Value.ValueType = Kingmaker.UnitLogic.Mechanics.ContextValueType.Simple;
-                });
+                buff.AddComponent<VanguardDamageResistance>();
             });
 
             var vanguardAreaEffect = Helpers.CreateBlueprint<BlueprintAbilityAreaEffect>("bubbelgauntlet-vanguard-area", area => {
@@ -533,17 +528,25 @@ namespace BubbleGauntlet {
                 area.Size = 20.Feet();
                 area.Fx = new PrefabLink { AssetId = "bbd6decdae32bce41ae8f06c6c5eb893" };
                 area.AddComponent<AbilityAreaEffectBuff>(apply => {
-                    apply.Condition = new();
+                    apply.Condition = new() {
+                        Conditions = Helpers.Arr(new ContextConditionIsCaster().Not())
+                    };
                     apply.m_Buff = vanguardActualBuff.ToReference<BlueprintBuffReference>();
                 });
             });
 
             Vanguard = Helpers.CreateBlueprint<BlueprintBuff>("bubblegauntlet-vanguardbuff", buff => {
-                buff.SetNameDescription("Bubble Shield", "This bubble shields its friends, granting all allies DR5/-");
+                buff.SetNameDescription("Bubble Shield", "This bubble shields its friends, granting all allies DR/- equal to (3 + Floor/2).");
                 buff.AddComponent<AddAreaEffect>(area => {
                     area.m_AreaEffect = vanguardAreaEffect.ToReference<BlueprintAbilityAreaEffectReference>();
                 });
             });
+
+            Main.Log("VANGUARD: \n" + string.Join("\n", Validator.Check(Vanguard).Select(e => $"ERROR: {e}")));
+            Main.Log("VANGUARD_AREA: \n" + string.Join("\n", Validator.Check(vanguardAreaEffect).Select(e => $"ERROR: {e}")));
+            Main.Log("VANGUARD_ACTUAL: \n" + string.Join("\n", Validator.Check(vanguardActualBuff).Select(e => $"ERROR: {e}")));
+            Main.Log("VANGAURD_COMPONENT: \n" + string.Join("\n", Validator.Check(vanguardActualBuff.GetComponent<VanguardDamageResistance>()).Select(e => $"ERROR: {e}")));
+
             PainShare = Helpers.CreateBlueprint<BlueprintBuff>("bubblegauntlet-pain-share", buff => {
                 buff.SetNameDescription("Pain Share", "This bubble is so well-liked that the first part of any damage dealt to it will instead be split amongst its friends");
                 buff.AddComponent<DamageRedirectionComponent>();

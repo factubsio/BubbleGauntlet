@@ -24,8 +24,6 @@ namespace BubbleGauntlet {
         }
 
         public static CombatEncounterTemplate GetNormalFight() {
-            return MonsterDB.CombatTemplates["Wild1Easy"];
-
             var valid = NormalFights.Where(f => f.IsAppropriate);
 
             if (valid.Empty())
