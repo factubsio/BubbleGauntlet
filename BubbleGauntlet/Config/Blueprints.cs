@@ -65,19 +65,18 @@ namespace BubbleGauntlet.Config {
         //            }
         //        });
         //    }
-        //    private static void WriteBlueprints(string fileName) {
-        //        string userConfigFolder = ModSettings.ModEntry.Path + "UserSettings";
-        //        var userPath = $"{userConfigFolder}{Path.DirectorySeparatorChar}{fileName}";
+        public static void WriteBlueprints(string fileName) {
+            string userConfigFolder = ModSettings.ModEntry.Path + "UserSettings";
+            var userPath = Path.Combine(userConfigFolder, fileName);
 
-        //        JsonSerializer serializer = new JsonSerializer {
-        //            NullValueHandling = NullValueHandling.Include,
-        //            Formatting = Formatting.Indented
-        //        };
-        //        using (StreamWriter sWriter = new StreamWriter(userPath))
-        //        using (JsonWriter jWriter = new JsonTextWriter(sWriter)) {
-        //            serializer.Serialize(jWriter, ModSettings.Blueprints);
-        //        }
-        //    }
+            JsonSerializer serializer = new JsonSerializer {
+                NullValueHandling = NullValueHandling.Include,
+                Formatting = Formatting.Indented
+            };
+            using StreamWriter sWriter = new StreamWriter(userPath);
+            using JsonWriter jWriter = new JsonTextWriter(sWriter);
+            serializer.Serialize(jWriter, ModSettings.Blueprints);
+        }
         //}
     }
 }

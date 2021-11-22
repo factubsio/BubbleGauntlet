@@ -28,6 +28,7 @@ namespace BubbleGauntlet {
         [JsonProperty]
         public DamageEnergyType DamageTheme;
 
+
         [JsonProperty]
         public EncounterType[] Encounters = new EncounterType[10];
         [JsonProperty]
@@ -37,13 +38,13 @@ namespace BubbleGauntlet {
         [JsonProperty]
         public int EncountersRemaining = 0;
         [JsonProperty]
-        public int ActiveEncounter = -1;
+        public int ActiveEncounter = 0;
 
-        [JsonIgnore]
-        public int EncountersCompleted => TotalEncounters - EncountersRemaining;
+        //[JsonIgnore]
+        //public int EncountersCompleted => TotalEncounters - EncountersRemaining;
 
         [JsonProperty]
-        public int Level = 1;
+        public int Level = 0;
         [JsonProperty]
         public Dictionary<EncounterType, EncounterState> Events = new() {
             { EncounterType.Fight, new EncounterState { Remaining = 8 } },
@@ -59,12 +60,10 @@ namespace BubbleGauntlet {
                 kv.Value.Remaining = EncounterTemplate.Get(kv.Key).Count;
             EncountersRemaining = TotalEncounters;
             ActiveEncounter = 0;
+            GauntletController.EnterFloor();
         }
 
-        public FloorState() {
-            Level = 0;
-            Descend();
-        }
+        public FloorState() { }
 
         [JsonIgnore]
         public static readonly Condition NoEncounters = new DynamicCondition(() => GauntletController.Floor.EncountersRemaining == 0);

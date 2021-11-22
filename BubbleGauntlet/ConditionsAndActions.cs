@@ -56,6 +56,22 @@ namespace BubbleGauntlet {
         public static FalseCondition Instance = new();
     }
 
+    public class DynamicContextAction : ContextAction {
+        private readonly Action<ContextAction> action;
+
+        public DynamicContextAction(Action<ContextAction> action) {
+            this.action = action;
+        }
+
+        public override string GetCaption() {
+            return "dynamic-action";
+        }
+
+        public override void RunAction() {
+            action(this);
+        }
+    }
+
     public class DynamicGameAction : GameAction {
         private readonly Action action;
 

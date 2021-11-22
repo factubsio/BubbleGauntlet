@@ -25,6 +25,9 @@ using BubbleGauntlet.Config;
 using BubbleGauntlet.Extensions;
 using System.Text;
 using Kingmaker.DialogSystem.Blueprints;
+using Kingmaker.UnitLogic.Buffs;
+using Kingmaker.EntitySystem.Entities;
+using Kingmaker.UnitLogic;
 
 namespace BubbleGauntlet.Utilities {
     public class EntryComparer : IComparer<(int begin, int end)> {
@@ -80,11 +83,22 @@ namespace BubbleGauntlet.Utilities {
 
     }
 
+
     public static class Helpers {
         public static T Create<T>(Action<T> init = null) where T : new() {
             var result = new T();
             init?.Invoke(result);
             return result;
+        }
+
+        public static Buff AddBuffNotDispelable(this UnitEntityData unit, BlueprintBuff blueprint, UnitEntityData caster = null) {
+            var buff = unit.AddBuff(blueprint, caster ?? unit);
+            buff.IsNotDispelable = true;
+            return buff;
+        }
+
+        public static T[] Arr<T>(params T []val) {
+            return val;
         }
 
         public static void AppendInPlace<T>(ref T[] arr, params T[] newValue) {

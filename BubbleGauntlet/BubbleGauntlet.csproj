@@ -182,11 +182,13 @@
     <Compile Include="ConditionsAndActions.cs" />
     <Compile Include="ContentManager.cs" />
     <Compile Include="Dialog.cs" />
+    <Compile Include="CombatManager.cs" />
     <Compile Include="Encounters.cs" />
     <Compile Include="FightEncounters.cs" />
     <Compile Include="FUN.cs" />
     <Compile Include="GauntletController.cs" />
     <Compile Include="GauntletState.cs" />
+    <Compile Include="MapManager.cs" />
     <Compile Include="MonsterDB.cs" />
     <Compile Include="MonsterName.cs" />
     <Compile Include="ProgressIndicator.cs" />

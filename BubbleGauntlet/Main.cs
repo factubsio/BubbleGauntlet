@@ -28,6 +28,7 @@ using Kingmaker.UI.MVVM._VM.Tooltip.Templates;
 using Kingmaker.Visual.Particles;
 using Kingmaker.Designers;
 using static Kingmaker.QA.Statistics.ExperienceGainStatistic;
+using Kingmaker.UnitLogic.Abilities;
 
 namespace BubbleGauntlet {
 
@@ -300,11 +301,12 @@ namespace BubbleGauntlet {
                 }
             }
             if (Input.GetKeyDown(KeyCode.I) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
-                CheatsCombat.KillAll();
+                var ability = new AbilityData(FUN.SpawnPool, GauntletController.Bubble);
+                var ctx = ability.CreateExecutionContext(new TargetWrapper(Game.Instance.Player.MainCharacter));
+                ability.Cast(ctx);
             }
             if (Input.GetKeyDown(KeyCode.D) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
-                //DialogTester.Run();
-                //ContentManager.InstallGauntletContent();
+                Blueprints.WriteBlueprints("Blueprints.json");
             }
             if (Input.GetKeyDown(KeyCode.L) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
                 CleanUpArena();
@@ -320,6 +322,8 @@ namespace BubbleGauntlet {
         }
 
         public static void CleanUpArena(bool full = false) {
+            CombatManager.CombatMonsters.Clear();
+
             foreach (SceneEntitiesState sceneEntitiesState in Game.Instance.LoadedAreaState.GetAllSceneStates()) {
                 if (sceneEntitiesState.IsSceneLoaded) {
                     foreach (EntityDataBase entityData in sceneEntitiesState.AllEntityData) {

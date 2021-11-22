@@ -33,6 +33,7 @@ namespace BubbleGauntlet {
 
         private static Sprite rest;
         private static Sprite fight;
+        private static Sprite fightElite;
         private static Sprite shop;
         private static Sprite maskSprite;
         private static Sprite borderSprite;
@@ -57,6 +58,7 @@ namespace BubbleGauntlet {
 
             rest = AssetLoader.LoadInternal("sprites", "UI_HudIcon_Camp_Default.png", new Vector2Int(106, 106), TextureFormat.ARGB32);
             fight = AssetLoader.LoadInternal("sprites", "UI_HudIcon_Group_Default.png", new Vector2Int(106, 106), TextureFormat.ARGB32);
+            fightElite = AssetLoader.LoadInternal("sprites", "UI_HudIcon_EliteGroup_Default.png", new Vector2Int(106, 106), TextureFormat.ARGB32);
             shop = AssetLoader.LoadInternal("sprites", "UI_HudIcon_Pack_Default.png", new Vector2Int(106, 106), TextureFormat.ARGB32);
             maskSprite = AssetLoader.LoadInternal("sprites", "UI_CircleMask256.png", new Vector2Int(256, 256), TextureFormat.ARGB32);
 
@@ -196,13 +198,13 @@ namespace BubbleGauntlet {
             CurrentThemeLabel.text = UIUtilityTexts.GetSingleEnergyTextSymbol(state.DamageTheme);
             for (int i = 0; i < 10; i++) {
                 EncounterChupa chupa = Encounters[i];
-                if (i >= state.EncountersCompleted) {
+                if (i > state.ActiveEncounter || (i == state.ActiveEncounter && GauntletController.ActiveEncounterType == EncounterType.None)) {
                     chupa.Main.sprite = null;
                     chupa.Main.color = Color.gray;
                 } else {
                     chupa.Main.sprite = state.Encounters[i] switch {
                         EncounterType.Fight => fight,
-                        EncounterType.EliteFight => fight,
+                        EncounterType.EliteFight => fightElite,
                         EncounterType.Rest => rest,
                         EncounterType.Shop => shop,
                         _ => null,
@@ -250,7 +252,7 @@ namespace BubbleGauntlet {
         }
         public override IEnumerable<ITooltipBrick> GetBody(TooltipTemplateType type) {
             var state = GauntletController.Floor;
-            if (index < state.EncountersCompleted) {
+            if (index <= state.ActiveEncounter) {
                 yield return new TooltipBrickText("You chose to " + state.Encounters[index].ToString());
             } else {
                 yield return FutureEncounter;

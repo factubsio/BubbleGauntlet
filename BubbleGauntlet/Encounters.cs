@@ -1,7 +1,9 @@
 ﻿using BubbleGauntlet.Utilities;
 using Kingmaker;
 using Kingmaker.Blueprints.Items;
+using Kingmaker.Cheats;
 using Kingmaker.Controllers.Rest;
+using Kingmaker.Designers;
 using Kingmaker.ElementsSystem;
 using Kingmaker.UI.MVVM._VM.Tooltip.Bricks;
 using Kingmaker.UI.MVVM._VM.Tooltip.Templates;
@@ -17,6 +19,7 @@ using UnityEngine;
 
 namespace BubbleGauntlet {
     public enum EncounterType {
+        None,
         Fight,
         EliteFight,
         Rest,
@@ -46,7 +49,7 @@ namespace BubbleGauntlet {
                     Action = new FightEncounter(this);
                     break;
                 case EncounterType.EliteFight:
-                    Count = 0;
+                    Count = 2;
                     Action = new FightEncounter(this);
                     break;
                 case EncounterType.Rest:
@@ -130,6 +133,7 @@ namespace BubbleGauntlet {
         protected override bool Instant => true;
 
         public override bool Execute() {
+            CheatsCombat.Heal();
             foreach (var unit in Game.Instance.SelectionCharacter.ActualGroup) {
                 var status = new RestStatus();
                 RestController.HealAndApplyRest(unit, status);
@@ -218,14 +222,14 @@ namespace BubbleGauntlet {
 
         public override bool Execute() {
             Main.Log("executing?");
-            var monsters = (Event == EncounterTemplate.EliteFight) ? GauntletController.GetEliteFight() : GauntletController.GetNormalFight();
+            var monsters = CombatManager.GetNormalFight();
             if (monsters == null) {
                 Main.Log("could not find a monster group...");
                 return false;
             }
 
             GauntletController.HideBubble();
-            GauntletController.InstantiateCombatTemplate(monsters);
+            CombatManager.InstantiateCombatTemplate(monsters, Event.Type == EncounterType.EliteFight);
             return true;
         }
     }
