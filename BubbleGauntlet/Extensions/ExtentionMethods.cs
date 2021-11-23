@@ -507,7 +507,7 @@ namespace BubbleGauntlet.Extensions {
         }
 
         public static void FixDomainSpell(this BlueprintAbility spell, int level, string spellListId) {
-            var spellList = BP.GetBlueprint<BlueprintSpellList>(spellListId);
+            var spellList = BP.Get<BlueprintSpellList>(spellListId);
             var spells = spellList.SpellsByLevel.First(s => s.SpellLevel == level).Spells;
             spells.Clear();
             spells.Add(spell);

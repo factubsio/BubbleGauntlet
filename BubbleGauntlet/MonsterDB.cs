@@ -55,10 +55,11 @@ namespace BubbleGauntlet {
     public static class MonsterDB {
 
         private static Dictionary<MonsterName, MonsterRef> Monsters = new();
+        public static BlueprintFactionReference MobFaction => BP.Ref<BlueprintFactionReference>("0f539babafb47fe4586b719d02aff7c4");
 
 
         public static void Initialize() {
-            var mobRef = BP.Ref<BlueprintFactionReference>("0f539babafb47fe4586b719d02aff7c4");
+            var mobRef = MobFaction;
 
             var pattern = new Regex(@"(.*?):(.*?):(.*)");
             TextLoader.Process("combat_tables.units_by_cr.txt", line => {
@@ -70,7 +71,7 @@ namespace BubbleGauntlet {
 
                 MonsterName name = (MonsterName)Enum.Parse(typeof(MonsterName), nameRaw);
 
-                var bp = BP.GetBlueprint<BlueprintUnit>(guid);
+                var bp = BP.Get<BlueprintUnit>(guid);
                 bp.m_Faction = mobRef;
                 bp.Components = bp.Components.Where(c => !(c is Experience || c is AddLoot)).ToArray();
 

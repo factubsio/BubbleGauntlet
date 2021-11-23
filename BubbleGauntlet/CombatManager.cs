@@ -87,7 +87,7 @@ namespace BubbleGauntlet {
         }
 
         public static UnitEntityData SpawnMonster(Vector3 center, Vector3 look, List<Vector3> existing, List<string> Generated, string toSpawn) {
-            var unitBp = BP.GetBlueprint<BlueprintUnit>(toSpawn.ToString());
+            var unitBp = BP.Get<BlueprintUnit>(toSpawn.ToString());
             return SpawnMonster(center, look, existing, Generated, unitBp);
         }
 

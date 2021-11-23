@@ -104,6 +104,10 @@
       <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Owlcat.Runtime.Visual">
+      <HintPath>$(WrathPathDebug)\Wrath_Data\Managed\Owlcat.Runtime.Visual.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Owlcat.Runtime.Core">
       <HintPath>$(WrathPathDebug)\Wrath_Data\Managed\Owlcat.Runtime.Core.dll</HintPath>
       <Private>False</Private>
@@ -179,6 +183,7 @@
   <ItemGroup>
     <Compile Include="BlueprintClass.cs" />
     <Compile Include="BookEncounters.cs" />
+    <Compile Include="Bosses\interface.cs" />
     <Compile Include="ConditionsAndActions.cs" />
     <Compile Include="ContentManager.cs" />
     <Compile Include="Dialog.cs" />
@@ -188,6 +193,7 @@
     <Compile Include="FUN.cs" />
     <Compile Include="GauntletController.cs" />
     <Compile Include="GauntletState.cs" />
+    <Compile Include="Bosses\HagBoss.cs" />
     <Compile Include="MapManager.cs" />
     <Compile Include="MonsterDB.cs" />
     <Compile Include="MonsterName.cs" />

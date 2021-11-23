@@ -436,6 +436,7 @@ namespace BubbleGauntlet {
         private GameAction[] stopActions;
         private ConditionsChecker conditions = new();
         private BlueprintUnitReference speaker;
+        private bool focusSpeaker;
 
         public CueBuilder(DialogBuilder root, string text) : base(root) {
             this.text = text;
@@ -460,8 +461,10 @@ namespace BubbleGauntlet {
                 cue.Speaker = new();
                 if (speaker == null)
                     cue.Speaker.NoSpeaker = true;
-                else
+                else {
                     cue.Speaker.m_Blueprint = speaker;
+                    cue.Speaker.MoveCamera = this.focusSpeaker;
+                }
                 cue.OnShow = new();
                 cue.OnStop = new();
                 if (stopActions != null)
@@ -472,8 +475,9 @@ namespace BubbleGauntlet {
             Complete();
         }
 
-        internal CueBuilder Speaker(BlueprintUnitReference speaker) {
+        internal CueBuilder Speaker(BlueprintUnitReference speaker, bool focus = false) {
             this.speaker = speaker;
+            this.focusSpeaker = false;
             return this;
         }
 

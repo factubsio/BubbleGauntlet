@@ -238,8 +238,12 @@ namespace BubbleGauntlet {
         void IAreaHandler.OnAreaBeginUnloading() { }
 
         void IAreaActivationHandler.OnAreaActivated() {
-            try {
+            if (GauntletController.InBossStage) {
+                GauntletController.Boss.Begin();
+                return;
+            }
 
+            try {
                 ProgressIndicator.Install();
                 GauntletController.InstallGauntletController();
             } catch (Exception e) {
@@ -305,9 +309,7 @@ namespace BubbleGauntlet {
                 }
             }
             if (Input.GetKeyDown(KeyCode.I) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
-                var ability = new AbilityData(FUN.SpawnPool, GauntletController.Bubble);
-                var ctx = ability.CreateExecutionContext(new TargetWrapper(Game.Instance.Player.MainCharacter));
-                ability.Cast(ctx);
+                GauntletController.BeginBossStage(ContentManager.MinorBosses["SeasonalHags"]);
             }
             if (Input.GetKeyDown(KeyCode.D) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
                 Blueprints.WriteBlueprints("Blueprints.json");

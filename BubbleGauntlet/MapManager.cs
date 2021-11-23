@@ -1,4 +1,5 @@
 ﻿using BubbleGauntlet.Utilities;
+using Kingmaker;
 using Kingmaker.Blueprints.Area;
 using Kingmaker.RandomEncounters.Settings;
 using Kingmaker.View;
@@ -26,7 +27,7 @@ namespace BubbleGauntlet {
 
         public static AreaMap FromRE(string re) {
             AreaMap map = new();
-            var areaRE = BP.GetBlueprint<BlueprintRandomEncounter>(re);
+            var areaRE = BP.Get<BlueprintRandomEncounter>(re);
             map.AreaEnter = areaRE.AreaEntrance;
             map.Area = map.AreaEnter.Area;
             map.Area.LoadingScreenSprites.Add(MapManager.BGSprite);
@@ -36,7 +37,7 @@ namespace BubbleGauntlet {
 
         public static AreaMap FromEnterPoint(string id) {
             AreaMap map = new();
-            map.AreaEnter = BP.GetBlueprint<BlueprintAreaEnterPoint>(id);
+            map.AreaEnter = BP.Get<BlueprintAreaEnterPoint>(id);
             map.Area = map.AreaEnter.Area;
             map.Area.LoadingScreenSprites.Clear();
             map.Area.LoadingScreenSprites.Add(MapManager.BGSprite);
@@ -175,6 +176,10 @@ namespace BubbleGauntlet {
 
             foreach (var map in Maps)
                 MapByArea[map.Area.AssetGuid.m_Guid] = map;
+        }
+
+        internal static void Load(AreaMap nextArea) {
+            Game.Instance.LoadArea(nextArea.AreaEnter, Kingmaker.EntitySystem.Persistence.AutoSaveMode.None);
         }
     }
 }

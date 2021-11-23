@@ -1,4 +1,5 @@
-﻿using BubbleGauntlet.Extensions;
+﻿using BubbleGauntlet.Bosses;
+using BubbleGauntlet.Extensions;
 using BubbleGauntlet.Utilities;
 using HarmonyLib;
 using Kingmaker;
@@ -31,6 +32,7 @@ using Kingmaker.View;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
 using static Kingmaker.QA.Statistics.ExperienceGainStatistic;
 
@@ -39,8 +41,8 @@ namespace BubbleGauntlet {
     public static class ContentManager {
 
         public static BlueprintAbility FakeBlueprint = new();
-        public static BlueprintUnit BubbleMasterBlueprint => BP.GetBlueprint<BlueprintUnit>("0234cbc0cc844da4d9cb225d6ed76a18");
-        public static BlueprintUnit ServiceVendorBlueprint => BP.GetBlueprint<BlueprintUnit>("9a1443603c9353d4194a583a31228c8b");
+        public static BlueprintUnit BubbleMasterBlueprint => BP.Get<BlueprintUnit>("0234cbc0cc844da4d9cb225d6ed76a18");
+        public static BlueprintUnit ServiceVendorBlueprint => BP.Get<BlueprintUnit>("9a1443603c9353d4194a583a31228c8b");
 
         public static BlueprintDialog ServiceDialog;
         public static BlueprintDialog BubbleDialog;
@@ -243,7 +245,7 @@ namespace BubbleGauntlet {
                         .AddAction(new DynamicGameAction(() => {
                             GauntletController.Floor.Descend();
                             var nextArea = MapManager.Maps.Where(map => map != GauntletController.CurrentMap).Random();
-                            Game.Instance.LoadArea(nextArea.AreaEnter, Kingmaker.EntitySystem.Persistence.AutoSaveMode.None);
+                            MapManager.Load(nextArea);
                             ProgressIndicator.Refresh();
                         }))
                         .Commit()
@@ -320,14 +322,25 @@ namespace BubbleGauntlet {
             UnlockMythicNonsense();
             CreateElites();
 
+            foreach (var bossType in Assembly.GetExecutingAssembly().GetTypes().Where(t => t.IsClass && typeof(IMinorBoss).IsAssignableFrom(t))) {
+                IMinorBoss boss = (IMinorBoss)Activator.CreateInstance(bossType);
+                try {
+                    Main.Log($"Creating boss: {boss.Name}");
+                    boss.Install();
+                    MinorBosses[boss.Name] = boss;
+                } catch (Exception e) {
+                    Main.Error(e, boss.Name);
+                }
+            }
+
             CreateServiceVendorBlueprint();
             CreateBubbleMasterBlueprint();
 
             MapManager.Install();
 
             //Never go to global map but I think it's required or the game will cry
-            var globalMapLocation_dummy = BP.GetBlueprint<BlueprintGlobalMapPoint>("556d74cd8f75e674981862b10a84fa70");
-            var initialPreset = BP.GetBlueprint<BlueprintAreaPreset>("b3e2cc3c1ccef09489209a20fde3fb72");
+            var globalMapLocation_dummy = BP.Get<BlueprintGlobalMapPoint>("556d74cd8f75e674981862b10a84fa70");
+            var initialPreset = BP.Get<BlueprintAreaPreset>("b3e2cc3c1ccef09489209a20fde3fb72");
 
             var bp = Helpers.CreateBlueprint<BlueprintAreaPreset>("bubble-gauntlet-preset", null, preset => {
                 try {
@@ -392,6 +405,8 @@ namespace BubbleGauntlet {
             });
         }
 
+        public static Dictionary<string, IMinorBoss> MinorBosses = new();
+
         private static void CreateElites() {
             Elite("f834867d15633294ea70579f3616af21", "bubble-elite-frog", $"Grippli Gripplesson", 1, 4);
             Elite("4dd913232eaf3894890b2bfaabcd8282", "bubble-elite-tztx", $"Wormy McWormface", 1, 4);
@@ -403,9 +418,9 @@ namespace BubbleGauntlet {
         private static void UnlockMythicNonsense() {
 
             static void UnlockMythic(string classBp) {
-                BP.GetBlueprint<BlueprintCharacterClass>(classBp).RemoveComponents<MythicClassLockComponent>();
-                BP.GetBlueprint<BlueprintCharacterClass>(classBp).RemoveComponents<PrerequisiteEtude>();
-                BP.GetBlueprint<BlueprintCharacterClass>(classBp).RemoveComponents<PrerequisiteFeature>();
+                BP.Get<BlueprintCharacterClass>(classBp).RemoveComponents<MythicClassLockComponent>();
+                BP.Get<BlueprintCharacterClass>(classBp).RemoveComponents<PrerequisiteEtude>();
+                BP.Get<BlueprintCharacterClass>(classBp).RemoveComponents<PrerequisiteFeature>();
             }
 
             HashSet<string> allowedPaths = new() {
@@ -433,7 +448,7 @@ namespace BubbleGauntlet {
         public static Dictionary<BlueprintUnit, BlueprintUnit> BubbleToSubble = new();
 
         private static (BlueprintUnit, BlueprintUnit) Elite(string baseBp, string id, string name, int minFloor, int maxFloor) {
-            var elite = Helpers.CreateCopy<BlueprintUnit>(BP.GetBlueprint<BlueprintUnit>(baseBp));
+            var elite = Helpers.CreateCopy<BlueprintUnit>(BP.Get<BlueprintUnit>(baseBp));
             elite.SetLocalisedName(id + ".name", $"{name} {UIUtilityTexts.DirectTextSymbol}");
             var subble = Helpers.CreateCopy(elite, elite => {
                 elite.SetLocalisedName(elite.name + "-subble", $"A fracture of {elite.CharacterName}");
@@ -488,7 +503,7 @@ namespace BubbleGauntlet {
                 List<BlueprintItem> list = new();
 
                 TextLoader.Process(fileName, line => {
-                    list.Add(BP.GetBlueprint<BlueprintItem>(line.Split(':')[1]));
+                    list.Add(BP.Get<BlueprintItem>(line.Split(':')[1]));
                 });
                 ItemTables.Add(table, list);
             }
@@ -498,7 +513,7 @@ namespace BubbleGauntlet {
                     table.AddComponent<LootItemsPackFixed>(pack => {
                         pack.m_Count = count;
                         pack.m_Item = new();
-                        pack.m_Item.m_Item = BP.GetBlueprint<BlueprintItem>(guid).ToReference<BlueprintItemReference>();
+                        pack.m_Item.m_Item = BP.Get<BlueprintItem>(guid).ToReference<BlueprintItemReference>();
                     });
                 }
             });
@@ -510,7 +525,7 @@ namespace BubbleGauntlet {
 
             for (int i = 0; i < ShopNames.Length; i++) {
                 var (name, shop) = ShopNames[i];
-                var baseUnit = BP.GetBlueprint<BlueprintUnit>("3425924a5b6a20b4f9e95d7e9fa3ccff");
+                var baseUnit = BP.Get<BlueprintUnit>("3425924a5b6a20b4f9e95d7e9fa3ccff");
                 baseUnit.SetLocalisedName($"vendor{i}.name", name);
                 baseUnit.Speed = new Feet(5);
                 Vendors.Add(baseUnit);

@@ -3,10 +3,20 @@ using Kingmaker.Blueprints;
 using System;
 using System.Collections.Generic;
 using BubbleGauntlet.Config;
+using Kingmaker.UnitLogic.Buffs.Blueprints;
+using Kingmaker.UnitLogic.Abilities.Blueprints;
+using Kingmaker.Blueprints.Classes;
 
 namespace BubbleGauntlet {
     static class BP {
         public static readonly Dictionary<BlueprintGuid, SimpleBlueprint> ModBlueprints = new Dictionary<BlueprintGuid, SimpleBlueprint>();
+
+        public static BlueprintUnit Unit(string id) => Get<BlueprintUnit>(id);
+        public static BlueprintBuff Buff(string id) => Get<BlueprintBuff>(id);
+        public static BlueprintAbility Ability(string id) => Get<BlueprintAbility>(id);
+        public static BlueprintCharacterClass Class(string id) => Get<BlueprintCharacterClass>(id);
+        public static BlueprintProgression Progression(string id) => Get<BlueprintProgression>(id);
+        public static BlueprintFeature Feature(string id) => Get<BlueprintFeature>(id);
 
         public static void RemoveModBlueprints() {
             foreach (var guid in ModBlueprints.Keys) {
@@ -15,9 +25,6 @@ namespace BubbleGauntlet {
 
         }
 
-        internal static object GetBlueprint<T>() {
-            throw new NotImplementedException();
-        }
 #if false
         public static IEnumerable<T> GetBlueprints<T>() where T : BlueprintScriptableObject {
             if (blueprints == null) {
@@ -33,11 +40,11 @@ namespace BubbleGauntlet {
             ModBlueprints.TryGetValue(assetId, out var value);
             return value as T;
         }
-        public static T GetBlueprint<T>(string id) where T : SimpleBlueprint {
+        public static T Get<T>(string id) where T : SimpleBlueprint {
             var assetId = new BlueprintGuid(System.Guid.Parse(id));
-            return GetBlueprint<T>(assetId);
+            return Get<T>(assetId);
         }
-        public static T GetBlueprint<T>(BlueprintGuid id) where T : SimpleBlueprint {
+        public static T Get<T>(BlueprintGuid id) where T : SimpleBlueprint {
             SimpleBlueprint asset = ResourcesLibrary.TryGetBlueprint(id);
             T value = asset as T;
             if (value == null) { Main.Log($"COULD NOT LOAD: {id} - {typeof(T)}"); }

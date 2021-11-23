@@ -20,6 +20,7 @@ using Kingmaker.Blueprints.Classes.Prerequisites;
 using HarmonyLib;
 using Kingmaker.UI;
 using Kingmaker.PubSubSystem;
+using BubbleGauntlet.Bosses;
 
 namespace BubbleGauntlet {
     public static class GauntletController {
@@ -39,6 +40,14 @@ namespace BubbleGauntlet {
                 Game.Instance.Player.AdvanceMythicExperience(Game.Instance.Player.MythicExperience + 1);
         }
 
+        public static bool InBossStage => Boss != null;
+        public static IMinorBoss Boss = null;
+
+        public static void BeginBossStage(IMinorBoss boss) {
+            Main.Log($"Attempting to load boss... {boss.Name}");
+            Boss = boss;
+            MapManager.Load(boss.Map);
+        }
 
         public static void CreateBubbleMaster() {
             Game.Instance.Player.Money = 2000;
