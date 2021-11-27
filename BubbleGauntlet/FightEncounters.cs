@@ -1,4 +1,5 @@
 ﻿using BubbleGauntlet.Utilities;
+using Kingmaker.Blueprints;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,6 +7,48 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BubbleGauntlet {
+
+    public struct CombatEliteTemplate {
+        public BlueprintUnit Blueprint;
+        public int MinFloor;
+        public int MaxFloor;
+
+        public CombatEliteTemplate(BlueprintUnit blueprint, int minFloor, int maxFloor) {
+            Blueprint = blueprint;
+            MinFloor = minFloor;
+            MaxFloor = maxFloor;
+        }
+
+        public override bool Equals(object obj) {
+            return obj is CombatEliteTemplate other &&
+                   EqualityComparer<BlueprintUnit>.Default.Equals(Blueprint, other.Blueprint) &&
+                   MinFloor == other.MinFloor &&
+                   MaxFloor == other.MaxFloor;
+        }
+
+        public override int GetHashCode() {
+            int hashCode = -201745204;
+            hashCode = hashCode * -1521134295 + EqualityComparer<BlueprintUnit>.Default.GetHashCode(Blueprint);
+            hashCode = hashCode * -1521134295 + MinFloor.GetHashCode();
+            hashCode = hashCode * -1521134295 + MaxFloor.GetHashCode();
+            return hashCode;
+        }
+
+        public void Deconstruct(out BlueprintUnit blueprint, out int minFloor, out int maxFloor) {
+            blueprint = Blueprint;
+            minFloor = MinFloor;
+            maxFloor = MaxFloor;
+        }
+
+        public static implicit operator (BlueprintUnit Blueprint, int MinFloor, int MaxFloor)(CombatEliteTemplate value) {
+            return (value.Blueprint, value.MinFloor, value.MaxFloor);
+        }
+
+        public static implicit operator CombatEliteTemplate((BlueprintUnit Blueprint, int MinFloor, int MaxFloor) value) {
+            return new CombatEliteTemplate(value.Blueprint, value.MinFloor, value.MaxFloor);
+        }
+    }
+
     public class CombatEncounterTemplate {
         public readonly List<Weighted<MonsterPool>> Monsters;
         public UnityEngine.RangeInt LevelRangeInclusive;

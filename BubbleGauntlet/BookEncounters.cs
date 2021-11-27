@@ -69,16 +69,16 @@ namespace BubbleGauntlet {
         }
 
 
-        private static EncounterSlice Build(Type type, Action<EncounterSlice, DialogBuilder, PageBuilder> act) {
+        private static EncounterSlice Build(string name, Type type, Action<EncounterSlice, DialogBuilder, PageBuilder> act) {
             EncounterSlice slice = new();
-            DialogBuilder builder = new();
+            DialogBuilder builder = new(name);
             var root = builder.RootPage("Encounter Title");
 
-            var dummyAnswerList = new AnswerListBuilder<DummyAnswerHolder>(builder, null);
-            dummyAnswerList.Add("Continue on").Commit(out slice.ExitPoint);
+            var dummyAnswerList = new AnswerListBuilder<DummyAnswerHolder>("answers", builder, null);
+            dummyAnswerList.Add("continue", "Continue on").Commit(out slice.ExitPoint);
 
             slice.EncounterType = type;
-            root.BasicCue($"<size=150%><line-indent=15%>{slice.EncounterType.ToString().MakeTitle(150)}</line-indent></size>");
+            root.BasicCue("title", $"<size=150%><line-indent=15%>{slice.EncounterType.ToString().MakeTitle(150)}</line-indent></size>");
 
             act(slice, builder, root);
 
@@ -89,44 +89,44 @@ namespace BubbleGauntlet {
         }
 
         public static EncounterSlice MakeTest2() {
-            return Build(Type.Problem, (slice, builder, root) => {
+            return Build("slice-test2", Type.Problem, (slice, builder, root) => {
 
-                root.BasicCue("You come across a long chamber covered in cobwebs.");
-                root.BasicCue("From behind numerous pillars you hear the sound of small, skittering, feet. Tiny spiders blanket the floor!");
-                root.BasicCue("On the opposite wall you see a door, while closer to where you are you also see a more solid, iron-banded door.");
+                root.BasicCue("intro-0", "You come across a long chamber covered in cobwebs.");
+                root.BasicCue("intro-1", "From behind numerous pillars you hear the sound of small, skittering, feet. Tiny spiders blanket the floor!");
+                root.BasicCue("intro-2", "On the opposite wall you see a door, while closer to where you are you also see a more solid, iron-banded door.");
 
-                var strongDoorPick = slice.SimpleCheck(builder, "sneak_to_door", StatType.SkillThievery, 20, (check, success, fail) => {
+                var strongDoorPick = slice.SimpleCheck("pick-door-strong", builder, "sneak_to_door", StatType.SkillThievery, 20, (check, success, fail) => {
                     check.AdjustDC(-4, slice.WhenFlag("sneak_to_door", 1));
-                    success.BasicCue("You easily manipulate the pins and slip into the next corridor, the sounds of the spiderlings fading behind you.");
-                    fail.BasicCue("With little time to think you attempt to rake the lock, but security pins delay your efforts; you suffer many tiny bites before managing to escape.");
+                    success.BasicCue("pick-door-good", "You easily manipulate the pins and slip into the next corridor, the sounds of the spiderlings fading behind you.");
+                    fail.BasicCue("pick-door-bad", "With little time to think you attempt to rake the lock, but security pins delay your efforts; you suffer many tiny bites before managing to escape.");
                     All(success, fail, x => x.Answers().AddExisting(slice.ExitPoint).Commit() );
                 });
 
-                var strongDoorBreak = slice.SimpleCheck(builder, "sneak_to_door", StatType.Strength, 12, (check, success, fail) => {
+                var strongDoorBreak = slice.SimpleCheck("break-door-strong", builder, "sneak_to_door", StatType.Strength, 12, (check, success, fail) => {
                     check.AdjustDC(-3, slice.WhenFlag("sneak_to_door", 1));
-                    success.BasicCue("You shatter the door and escape, the sounds of the spiderlings fading behind you.");
-                    fail.BasicCue("You break through the door, but not before suffering many tiny bites from the spiderling horde.");
+                    success.BasicCue("shatter-door-good", "You shatter the door and escape, the sounds of the spiderlings fading behind you.");
+                    fail.BasicCue("shatter-door-bad", "You break through the door, but not before suffering many tiny bites from the spiderling horde.");
                     All(success, fail, x => x.Answers().AddExisting(slice.ExitPoint).Commit() );
                 });
 
-                var strongDoorSneak = slice.SimpleCheck(builder, "sneak_to_door", StatType.SkillStealth, 15, (success, fail) => {
-                    success.BasicCue("You manage to avoid most of spiderlings, they are coming, but you've bought yourself time.");
-                    success.BasicCue("You approach the heavy door, it looks solid with a functioning lock.");
+                var strongDoorSneak = slice.SimpleCheck("sneak-door-strong", builder, "sneak_to_door", StatType.SkillStealth, 15, (success, fail) => {
+                    success.BasicCue("sneak-strong-good", "You manage to avoid most of spiderlings, they are coming, but you've bought yourself time.");
+                    success.BasicCue("sneak-strong-bad", "You approach the heavy door, it looks solid with a functioning lock.");
 
-                    fail.BasicCue("The spiderlings immediately notice your laughable attempts at sneaking and are coming for you!");
-                    fail.BasicCue("You approach the heavy door, it looks solid with a functioning lock.");
+                    fail.BasicCue("sneak-strong-good", "The spiderlings immediately notice your laughable attempts at sneaking and are coming for you!");
+                    fail.BasicCue("sneak-strong-bad", "You approach the heavy door, it looks solid with a functioning lock.");
 
                     All(success, fail, x => {
                         x.Answers()
-                            .Add("Try to break down the door").ContinueWith(strongDoorBreak).Commit()
-                            .Add("Try to pick the lock").ContinueWith(strongDoorPick).Commit()
+                            .Add("try-break", "Try to break down the door").ContinueWith(strongDoorBreak).Commit()
+                            .Add("try-pick", "Try to pick the lock").ContinueWith(strongDoorPick).Commit()
                             .Commit();
                     });
                 });
 
 
                 root.Answers()
-                    .Add("Try to sneak towards the closer door")
+                    .Add("try-sneak", "Try to sneak towards the closer door")
                         .ContinueWith(strongDoorSneak)
                         .Commit()
                     .Commit();
@@ -139,32 +139,32 @@ namespace BubbleGauntlet {
         }
 
         public static EncounterSlice MakeOpporunity_Grave() {
-            return Build(Type.Opportunity, (slice, builder, root) => {
+            return Build("slice-grave", Type.Opportunity, (slice, builder, root) => {
 
-                root.BasicCue("You come across a warm grave pulsing with arcane energy");
+                root.BasicCue("intro", "You come across a warm grave pulsing with arcane energy");
 
-                var detectTraps = slice.SimpleCheck(builder, root, "detected_icons", StatType.SkillPerception, 12,
+                var detectTraps = slice.SimpleCheck("detect-traps", builder, root, "detected_icons", StatType.SkillPerception, 12,
                     "You don't find any traps, but you find some iconography that suggest the name of deity in which this grave was corrupted",
                     "Your search comes up empty");
 
-                var senseMagic = slice.SimpleCheck(builder, root, "detected_energy", StatType.SkillKnowledgeArcana, 12,
+                var senseMagic = slice.SimpleCheck("sense-magic", builder, root, "detected_energy", StatType.SkillKnowledgeArcana, 12,
                     "You identify the source of arcange energy as a specific group of Demodands that operate out of <insert-location>",
                     "You sense that the energy is demonic in origin but cannot pinpoint its source");
 
 
                 var goodLoot = builder.NewPage("good-loot");
-                goodLoot.BasicCue("Your rituals are a success! A magical item slowly emerges from the soil");
+                goodLoot.BasicCue("loot-good", "Your rituals are a success! A magical item slowly emerges from the soil");
                 //goodLoot.OnShow(GiveLoot);
                 goodLoot.Answers().AddExisting(slice.ExitPoint).Commit();
                 goodLoot.Commit();
 
-                var badLoot = builder.NewPage("good-loot");
-                badLoot.BasicCue("Your rituals do not succeed, but you sense a wave of gratidue for trying.");
+                var badLoot = builder.NewPage("bad-loot");
+                badLoot.BasicCue("lood-bad", "Your rituals do not succeed, but you sense a wave of gratidue for trying.");
                 //goodLoot.OnShow(GiveBuff)
                 badLoot.Answers().AddExisting(slice.ExitPoint).Commit();
                 badLoot.Commit();
 
-                var sanctify = builder.NewCheck(StatType.SkillLoreReligion);
+                var sanctify = builder.NewCheck("check-sanctify", StatType.SkillLoreReligion);
                 sanctify
                     .OnSuccess(goodLoot)
                     .OnFail(badLoot)
@@ -175,39 +175,39 @@ namespace BubbleGauntlet {
                     .Commit();
 
                 var openNoSanctify = builder.NewPage("open-no-sanctify");
-                openNoSanctify.BasicCue("You determine there is no time to sanctify the grave.");
-                openNoSanctify.BasicCue("You dig up a casket that is curiously empty...");
+                openNoSanctify.BasicCue("no-time", "You determine there is no time to sanctify the grave.");
+                openNoSanctify.BasicCue("empty-casket", "You dig up a casket that is curiously empty...");
                 openNoSanctify.Answers().AddExisting(slice.ExitPoint).Commit();
                 openNoSanctify.Commit();
 
                 root.Answers()
-                    .Add("Try to detect the source of the energy")
+                    .Add("try-detect", "Try to detect the source of the energy")
                         .Once()
                         .ContinueWith(senseMagic)
                         .Commit()
-                    .Add("Check the grave for traps")
+                    .Add("try-check-traps", "Check the grave for traps")
                         .Once()
                         .ContinueWith(detectTraps)
                         .Commit()
-                    .Add("Sanctify the grave")
+                    .Add("try-sanctify", "Sanctify the grave")
                         .Once()
                         .ContinueWith(sanctify)
                         .Commit()
-                    .Add("Open the grave")
+                    .Add("open-grave", "Open the grave")
                         .ContinueWith(openNoSanctify)
                         .Commit()
                     .Commit();
             });
         }
 
-        private CheckBuilder SimpleCheck(DialogBuilder builder, string flag, StatType skill, int dc, Action<CheckBuilder, PageBuilder, PageBuilder> act) {
-            var goodOutcome = builder.NewPage("good");
-            var badOutcome = builder.NewPage("bad");
+        private CheckBuilder SimpleCheck(string name, DialogBuilder builder, string flag, StatType skill, int dc, Action<CheckBuilder, PageBuilder, PageBuilder> act) {
+            var goodOutcome = builder.NewPage($"{name}/good");
+            var badOutcome = builder.NewPage($"{name}/bad");
 
             if (flag != null)
                 goodOutcome.OnShow(AdjustFlag(flag, 1));
 
-            var check = builder.NewCheck(skill);
+            var check = builder.NewCheck(name, skill);
             check
                 .DC(dc)
                 .OnSuccess(goodOutcome)
@@ -224,25 +224,25 @@ namespace BubbleGauntlet {
         }
 
 
-        private CheckBuilder SimpleCheck(DialogBuilder builder, string flag, StatType skill, int dc, Action<PageBuilder, PageBuilder> act) {
-            return SimpleCheck(builder, flag, skill, dc, (_, a, b) => act(a, b));
+        private CheckBuilder SimpleCheck(string name, DialogBuilder builder, string flag, StatType skill, int dc, Action<PageBuilder, PageBuilder> act) {
+            return SimpleCheck(name, builder, flag, skill, dc, (_, a, b) => act(a, b));
         }
 
-        private CheckBuilder SimpleCheck(DialogBuilder builder, PageBuilder continueWith, string flag, StatType skill, int dc, string good, string bad) {
-            var goodOutcome = builder.NewPage("good");
-            var badOutcome = builder.NewPage("bad");
+        private CheckBuilder SimpleCheck(string name, DialogBuilder builder, PageBuilder continueWith, string flag, StatType skill, int dc, string good, string bad) {
+            var goodOutcome = builder.NewPage($"{name}/good");
+            var badOutcome = builder.NewPage($"{name}/bad");
 
             goodOutcome
-                .BasicCue(good)
+                .BasicCue("check-good", good)
                 .ContinueWith(continueWith)
                 .OnShow(AdjustFlag(flag, 1))
                 .Commit();
             badOutcome
-                .BasicCue(bad)
+                .BasicCue("check-bad", bad)
                 .ContinueWith(continueWith)
                 .Commit();
 
-            var detectTraps = builder.NewCheck(skill);
+            var detectTraps = builder.NewCheck(name, skill);
             detectTraps
                 .DC(dc)
                 .Once()

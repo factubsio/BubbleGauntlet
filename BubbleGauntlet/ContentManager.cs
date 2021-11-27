@@ -61,9 +61,9 @@ namespace BubbleGauntlet {
 
         public static void CreateBubbleDialog() {
             var hydrateCustom = new DynamicGameAction(() => {
-                long goldBefore = Game.Instance.Player.Money;
-                if (goldBefore < Game.Instance.Player.GetCustomCompanionCost())
-                    return;
+                //long goldBefore = Game.Instance.Player.Money;
+                //if (goldBefore < Game.Instance.Player.GetCustomCompanionCost())
+                //    return;
 
 
                 var toAdd = RosterSaver.HydrateUnit();
@@ -79,9 +79,9 @@ namespace BubbleGauntlet {
                     vector = FreePlaceSelector.GetRelaxedPosition(1, true);
                 }
                 toAdd.Position = vector;
-                Game.Instance.Player.Money = goldBefore - Game.Instance.Player.GetCustomCompanionCost();
-                Main.Log($"Subtracted gold, now have: {Game.Instance.Player.Money}");
-                GameHelper.GainExperience(2000, null, GainType.Quest);
+                //Game.Instance.Player.Money = goldBefore - Game.Instance.Player.GetCustomCompanionCost();
+                //Main.Log($"Subtracted gold, now have: {Game.Instance.Player.Money}");
+                //GameHelper.GainExperience(2000, null, GainType.Quest);
             });
             var createCustom = new DynamicGameAction(() => {
                 long goldBefore = Game.Instance.Player.Money;
@@ -121,59 +121,60 @@ namespace BubbleGauntlet {
                 GauntletController.CompleteEncounter();
             });
 
-            CueBuilder mainRoot = null;
 
-            var serviceBuilder = new DialogBuilder();
+
             {
-                mainRoot = serviceBuilder.Root("I am here to help, in any small way I can.\nI can hire brave adventurers, raise dead companions, and I stock a variety of common items.");
+                var serviceBuilder = new DialogBuilder("service-dialog");
+                
+                var mainRoot = serviceBuilder.Root("I am here to help, in any small way I can.\nI can hire brave adventurers, raise dead companions, and I stock a variety of common items.");
                 mainRoot.Speaker(ServiceVendorBlueprint.ToReference<BlueprintUnitReference>());
 
                 mainRoot.Answers()
-                    .Add("Raise all dead companions. <{bubble_res_cost}> (no dead companions)")
+                    .Add("raise-all-nodead", "Raise all dead companions. <{bubble_res_cost}> (no dead companions)")
                         .When(new HasDeadCompanions().Invert())
                         .Disabled()
                         .Commit()
-                    .Add("Raise all dead companions. <{bubble_res_cost}> (not enough gold)")
+                    .Add("raise-all-nogold", "Raise all dead companions. <{bubble_res_cost}> (not enough gold)")
                         .When(new HasEnoughMoneyForRes().Invert(), new HasDeadCompanions())
                         .Disabled()
                         .Commit()
-                    .Add("Raise all dead companions. <{bubble_res_cost}>")
+                    .Add("raise-all","Raise all dead companions. <{bubble_res_cost}>")
                         .When(new HasEnoughMoneyForRes(), new HasDeadCompanions())
                         .AddAction(new ResurrectCompanions())
                         .Commit()
 
-                    .Add("Hire a companion. <{custom_companion_cost}> (not enough gold)")
+                    .Add("hire-nogold", "Hire a companion. <{custom_companion_cost}> (not enough gold)")
                         .When(new HasEnoughMoneyForCustomCompanion().Invert())
                         .Disabled()
                         .Commit()
-#if BUBBLEDEV
-                    .Add("Recall a saved companion. <{custom_companion_cost}> (not enough gold)")
-                        .When(new HasEnoughMoneyForCustomCompanion().Invert())
-                        .Disabled()
-                        .Commit()
-#endif
 
-                    .Add("Hire a companion. <{custom_companion_cost}>")
+                    .Add("hire", "Hire a companion. <{custom_companion_cost}>")
                         .When(new HasEnoughMoneyForCustomCompanion())
                         .AddAction(createCustom)
                         .Commit()
-#if BUBBLEDEV
-                    .Add("Recall a saved companion. <{custom_companion_cost}>")
-                        .When(new HasEnoughMoneyForCustomCompanion())
-                        .AddAction(hydrateCustom)
-                        .Commit()
-#endif
 
-                    .Add("What do you have for sale?")
+                    .Add("shop", "What do you have for sale?")
                         .AddAction(basicShop)
                         .Commit()
 
-                    .Add("DEV: Advance mythic level")
+                    .Add("dev-recall", "DEV: Recall a saved companion. <{custom_companion_cost}>")
+#if !BUBBLEDEV
+                        .When(FalseCondition.Instance)
+#endif
+                        .AddAction(hydrateCustom)
+                        .Commit()
+                    .Add("dev-mythic-levelup", "DEV: Advance mythic level")
+#if !BUBBLEDEV
+                        .When(FalseCondition.Instance)
+#endif
                         .AddAction(new DynamicGameAction(() => {
                             Game.Instance.Player.AdvanceMythicExperience(Game.Instance.Player.MythicExperience + 1);
                         }))
                         .Commit()
-                    .Add("DEV: Advance character level")
+                    .Add("dev-levelup", "DEV: Advance character level")
+#if !BUBBLEDEV
+                        .When(FalseCondition.Instance)
+#endif
                         .AddAction(new DynamicGameAction(() => {
                             foreach (var c in Game.Instance.Player.PartyCharacters) {
                                 var progression = c.Value.Descriptor.Progression;
@@ -188,60 +189,95 @@ namespace BubbleGauntlet {
                         }))
                         .Commit()
 
-                    .Add("I have no need of you at this juncture.")
+                    .Add("end", "I have no need of you at this juncture.")
                         .Commit()
 
                     .Commit();
                 mainRoot.Commit();
+                ServiceDialog = Helpers.CreateDialog("bubble-dialog-service", dialog => {
+                    dialog.FirstCue.Cues.Add(serviceBuilder.Build());
+                    dialog.TurnFirstSpeaker = true;
+                });
             }
 
-            var dialogBuilder = new DialogBuilder();
+
+            BlueprintCueBaseReference mainBubbleCue;
             {
-                mainRoot = dialogBuilder.Root("{bubble_gauntlet_welcome}\n{bubble_encounters_remaining}.");
+                var dialogBuilder = new DialogBuilder("bubble-main");
+                var mainRoot = dialogBuilder.Root("{bubble_gauntlet_welcome}\n{bubble_encounters_remaining}.");
                 mainRoot.Speaker(BubbleMasterBlueprint.ToReference<BlueprintUnitReference>());
                 mainRoot.When(new DynamicCondition(() => !GauntletController.Floor.Shopping));
-                var backstory = dialogBuilder.Cue("I am the bubbliest bubble that ever bubbled");
-                var descendCue = dialogBuilder.Cue("Ready yourself!");
+                var backstory = dialogBuilder.Cue("backstory", "I am the bubbliest bubble that ever bubbled");
+                var beginDescend = dialogBuilder.Cue("descend", "Ready yourself!");
 
-                descendCue.OnStop(new DescendAction()).Commit();
+                beginDescend.OnStop(new DescendAction()).Commit();
 
                 backstory.ContinueWith(mainRoot).Commit();
 
                 var rootAnswers = mainRoot.Answers();
 
-                rootAnswers.Add("ONWARD! Rest then contine to the next floor.")
+                rootAnswers.Add("begin-next-floor", "ONWARD! Rest then contine to the next floor.")
                     .When(FloorState.NoEncounters)
-                    .ContinueWith(descendCue)
+                    .ContinueWith(beginDescend)
                     .Commit();
 
                 foreach (var eventType in EncounterTemplate.All) {
-                    rootAnswers.Add($"I will {eventType.Name}! [{eventType.Tag.ToTag()} left]")
+                    rootAnswers.Add($"choose-encounter-{eventType.Type}", $"I will {eventType.Name}! [{eventType.Tag.ToTag()} left]")
                         .Enabled(FloorState.HasEncounters, eventType.Available)
                         .AddAction(eventType.Action)
                         .Commit();
                 }
 
                 rootAnswers
-                    .Add("Tell me more about yourself.")
+                    .Add("start-backstory", "Tell me more about yourself.")
                         .ContinueWith(backstory)
                         .Commit()
 
-                    .Add("I must still wait before bubbling.")
+                    .Add("leave", "I must still wait before bubbling.")
                         .Commit();
 
+
                 rootAnswers.Commit();
+                mainRoot.Commit();
+                mainBubbleCue = dialogBuilder.Build();
             }
 
-            var descendBuilder = new DialogBuilder();
+            BlueprintCueBaseReference vendorActiveCue;
             {
+                var vendorIsActive = new DialogBuilder("bubble-vendor-active");
+                var root = vendorIsActive.Root("Would you like me to dismiss the vendor so you can continue?");
+                root.Speaker(BubbleMasterBlueprint.ToReference<BlueprintUnitReference>());
+                root.When(new DynamicCondition(() => GauntletController.Floor.Shopping));
+                root.Answers()
+                        .Add("no", "No, I still have shopping to do.").Commit()
+                        .Add("yes", "Yes, I am ready to continue")
+                            .AddAction(dismissVendor)
+                            .ContinueWith(References.Static(mainBubbleCue))
+                            .Commit()
+                        .Commit();
+
+                root.Commit();
+                vendorActiveCue = vendorIsActive.Build();
+            }
+
+            BubbleDialog = Helpers.CreateDialog("bubble-dialog-bubblemaster", dialog => {
+                dialog.FirstCue.Cues.Add(mainBubbleCue);
+                dialog.FirstCue.Cues.Add(vendorActiveCue);
+                dialog.TurnFirstSpeaker = true;
+            });
+
+
+            BlueprintCueBaseReference descendCue;
+            {
+                var descendBuilder = new DialogBuilder("descend-dialog");
                 var root = descendBuilder.RootPage("descend-root");
-                root.BasicCue("You descend to the next floor");
+                root.BasicCue("descend-complete", "You descend to the next floor");
                 root.OnShow(new DynamicGameAction(() => {
                     int exp = GauntletController.FloorExperience(GauntletController.Floor.Level);
                     GameHelper.GainExperience(exp, null, GainType.Quest);
                 }));
                 root.Answers()
-                    .Add("Continue")
+                    .Add("continue", "Continue")
                         .AddAction(new DynamicGameAction(() => {
                             GauntletController.Floor.Descend();
                             var nextArea = MapManager.Maps.Where(map => map != GauntletController.CurrentMap).Random();
@@ -251,41 +287,13 @@ namespace BubbleGauntlet {
                         .Commit()
                     .Commit();
                 root.Commit();
-            }
-
-            var vendorIsActive = new DialogBuilder();
-            {
-                var root = vendorIsActive.Root("Would you like me to dismiss the vendor so you can continue?");
-                root.Speaker(BubbleMasterBlueprint.ToReference<BlueprintUnitReference>());
-                root.When(new DynamicCondition(() => GauntletController.Floor.Shopping));
-                root.Answers()
-                        .Add("No, I still have shopping to do.").Commit()
-                        .Add("Yes, I am ready to continue")
-                            .AddAction(dismissVendor)
-                            .ContinueWith(mainRoot)
-                            .Commit()
-                        .Commit();
-
-                root.Commit();
+                descendCue = descendBuilder.Build();
             }
 
 
-
-
-            mainRoot.Commit();
-
-            ServiceDialog = Helpers.CreateDialog("bubble-dialog-service", dialog => {
-                dialog.FirstCue.Cues.Add(serviceBuilder.Build());
-                dialog.TurnFirstSpeaker = true;
-            });
-
-            BubbleDialog = Helpers.CreateDialog("bubble-dialog-bubblemaster", dialog => {
-                dialog.FirstCue.Cues.Add(dialogBuilder.Build());
-                dialog.FirstCue.Cues.Add(vendorIsActive.Build());
-            });
 
             DescendDialog = Helpers.CreateDialog("bubble-dialog-descend", dialog => {
-                dialog.FirstCue.Cues.Add(descendBuilder.Build());
+                dialog.FirstCue.Cues.Add(descendCue);
                 dialog.Type = DialogType.Book;
                 dialog.TurnFirstSpeaker = true;
                 dialog.TurnPlayer = true;
@@ -315,6 +323,7 @@ namespace BubbleGauntlet {
             }
 
             MonsterDB.Initialize();
+
             CombatManager.Install();
             FUN.Install();
             CreateVendorBlueprints();
@@ -357,7 +366,6 @@ namespace BubbleGauntlet {
                     preset.StartGameActions = new();
                     preset.StartGameActions.Actions = new GameAction[] {
                         new DynamicGameAction(() => {
-                            LevelUpHelper.AddStartingItems(Game.Instance.Player.MainCharacter.Value);
                         }),
                     };
                 } catch (Exception ex) {
@@ -374,14 +382,15 @@ namespace BubbleGauntlet {
             Main.Log("Set new game preset");
         }
 
-
         private static void CreateBubbleMasterBlueprint() {
             var crink = BubbleMasterBlueprint;
             crink.SetLocalisedName("bubble-dm", "Bubbles");
 
+            crink.RemoveComponents<DialogOnClick>();
+
             crink.AddComponent<DialogOnClick>(dialogOnClick => {
                 dialogOnClick.m_Dialog = BubbleDialog.ToReference<BlueprintDialogReference>();
-                dialogOnClick.name = "start-dialog";
+                dialogOnClick.name = "start-bubble-dialog";
                 dialogOnClick.NoDialogActions = new();
                 dialogOnClick.Conditions = new();
             });
@@ -449,7 +458,9 @@ namespace BubbleGauntlet {
 
         private static (BlueprintUnit, BlueprintUnit) Elite(string baseBp, string id, string name, int minFloor, int maxFloor) {
             var elite = Helpers.CreateCopy<BlueprintUnit>(BP.Get<BlueprintUnit>(baseBp));
-            elite.SetLocalisedName(id + ".name", $"{name} {UIUtilityTexts.DirectTextSymbol}");
+            var sprite = "<sprite name=\"Magic\" color=#3f0000>";
+
+            elite.SetLocalisedName(id + ".name", $"{name} {sprite}");
             var subble = Helpers.CreateCopy(elite, elite => {
                 elite.SetLocalisedName(elite.name + "-subble", $"A fracture of {elite.CharacterName}");
             });
@@ -461,7 +472,7 @@ namespace BubbleGauntlet {
         public static IEnumerable<BlueprintItem> AllItems => ItemTables.Where(k => k.Key != "Usable").SelectMany(kv => kv.Value);
 
         public static Dictionary<string, List<BlueprintItem>> ItemTables = new();
-        public static List<(BlueprintUnit Blueprint, int MinFloor, int MaxFloor)> Elites = new();
+        public static List<CombatEliteTemplate> Elites = new();
         public static BlueprintUnit EliteFrogSubling;
 
 
@@ -530,13 +541,13 @@ namespace BubbleGauntlet {
                 baseUnit.Speed = new Feet(5);
                 Vendors.Add(baseUnit);
 
-                var builder = new DialogBuilder();
+                var builder = new DialogBuilder("vendor-dialog");
                 var entry = builder.Root($"Welcome to {shop}, what can I do you for?");
                 entry.Answers()
-                    .Add("Let's see what so-called valuables you have to offer.")
+                    .Add("shop", "Let's see what so-called valuables you have to offer.")
                         .AddAction(StartVending)
                         .Commit()
-                    .Add("I'm not interested in any of your cheap tat!").Commit()
+                    .Add("leave", "I'm not interested in any of your cheap tat!").Commit()
                     .Commit();
                 entry.Commit();
 
@@ -565,6 +576,15 @@ namespace BubbleGauntlet {
             return true;
         }
     }
+    [HarmonyPatch(typeof(PortraitData), "get_SmallPortrait")]
+    public static class SmallPortraitInjecotr {
+        public static Dictionary<PortraitData, Sprite> Replacements = new();
+        public static bool Prefix(PortraitData __instance, ref Sprite __result) {
+            if (Replacements.TryGetValue(__instance, out __result))
+                return false;
+            return true;
+        }
+    }
 
 
     [HarmonyPatch]
@@ -580,4 +600,6 @@ namespace BubbleGauntlet {
             ContentManager.InstallGauntletContent();
         }
     }
+
 }
+

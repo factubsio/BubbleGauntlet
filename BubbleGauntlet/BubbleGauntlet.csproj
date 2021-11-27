@@ -183,11 +183,14 @@
   <ItemGroup>
     <Compile Include="BlueprintClass.cs" />
     <Compile Include="BookEncounters.cs" />
+    <Compile Include="Bosses\AiCastSpellBuilder.cs" />
+    <Compile Include="Components\DynamicAddStatBonus.cs" />
     <Compile Include="Bosses\interface.cs" />
     <Compile Include="ConditionsAndActions.cs" />
     <Compile Include="ContentManager.cs" />
     <Compile Include="Dialog.cs" />
     <Compile Include="CombatManager.cs" />
+    <Compile Include="DynamicGauntletValues.cs" />
     <Compile Include="Encounters.cs" />
     <Compile Include="FightEncounters.cs" />
     <Compile Include="FUN.cs" />
@@ -234,6 +237,7 @@
     <Compile Include="Utilities\SpellTools.cs" />
     <Compile Include="Utilities\TypeReplaceTranspiler.cs" />
     <Compile Include="Validator.cs" />
+    <Compile Include="Components\DynamicDamageResistancePhysical.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Config\AddedContent.json" />

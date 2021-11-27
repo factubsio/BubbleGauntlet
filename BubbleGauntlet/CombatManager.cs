@@ -4,20 +4,27 @@ using Kingmaker;
 using Kingmaker.Blueprints;
 using Kingmaker.Blueprints.Classes;
 using Kingmaker.Blueprints.Root.Strings.GameLog;
+using Kingmaker.ElementsSystem;
 using Kingmaker.EntitySystem;
 using Kingmaker.EntitySystem.Entities;
+using Kingmaker.UI.MVVM._VM.Tooltip.Bricks;
+using Kingmaker.UI.MVVM._VM.Tooltip.Templates;
+using Kingmaker.UnitLogic.Buffs;
+using Kingmaker.UnitLogic.Buffs.Blueprints;
 using Kingmaker.UnitLogic.FactLogic;
+using Kingmaker.UnitLogic.Mechanics.Components;
 using Kingmaker.Utility;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace BubbleGauntlet {
+
     public static class CombatManager {
+        public static List<UnitEntityData> CombatMonsters = new();
         public static List<CombatEncounterTemplate> NormalFights = new();
+
+        private static BlueprintBuff CountDeaths;
 
         public static CombatEncounterTemplate GetEliteFight() {
             return null;
@@ -32,14 +39,7 @@ namespace BubbleGauntlet {
             return valid.Random();
         }
 
-        internal static void Install() {
-            NormalFights.AddRange(MonsterDB.CombatTemplates.Values);
-        }
-
-        public static List<UnitEntityData> CombatMonsters = new();
-
         public static void InstantiateCombatTemplate(CombatEncounterTemplate template, bool elite) {
-
             var Floor = GauntletController.Floor;
 
             Main.CleanUpArena();
@@ -47,7 +47,14 @@ namespace BubbleGauntlet {
 
             List<Vector3> existing = new();
 
-            float encounterBudgetScale = UnityEngine.Random.Range(0.9f, 1.8f);
+            float rangeScale = 1;
+            if (GauntletController.Floor.Level == 1)
+                rangeScale = 0.66f;
+
+            float lowerRange = 0.9f;
+            float upperRange = 1.8f;
+
+            float encounterBudgetScale = UnityEngine.Random.Range(lowerRange * rangeScale, upperRange * rangeScale);
             //float encounterBudgetScale = UnityEngine.Random.Range(0.3f, 0.5f);
 
             List<string> Generated = new();
@@ -56,6 +63,11 @@ namespace BubbleGauntlet {
             foreach (var toSpawn in template.GetMonsters(encounterBudgetScale)) {
                 last = SpawnMonster(center, look, existing, Generated, toSpawn);
             }
+
+            int rawBudget = template.Monsters.Sum(p => p.count);
+
+            int totalBudget = (int)(rawBudget * encounterBudgetScale);
+            int maxBudget = (int)(rawBudget * 1.8f * rangeScale);
 
             if (last != null) {
                 Main.Log("Making elite...");
@@ -67,23 +79,29 @@ namespace BubbleGauntlet {
                 Main.LogNotNull("bubbleylevels.class", FUN.AddBubblyLevels.CharacterClass);
                 AddClassLevels.LevelUp(FUN.AddBubblyLevels, last.Descriptor, D.Roll(Floor.Level + 2));
                 last.AddBuffNotDispelable(FUN.BubblyBuffVisual);
+                Generated[Generated.Count - 1] = last.CharacterName;
                 Main.Log("Done");
             }
 
             if (elite) {
                 var bp = ContentManager.Elites.Where(e => Floor.Level >= e.MinFloor && Floor.Level <= e.MaxFloor).Random().Blueprint;
-                //var bp = ContentManager.Elites[3].Blueprint;
-                var miniboss = SpawnMonster(center, look, existing, Generated, bp);
-                AddClassLevels.LevelUp(FUN.AddEliteLevels, miniboss.Descriptor, (1 + (Floor.Level / 3)) * 2);
-                miniboss.AddBuffNotDispelable(FUN.EliteAttacks.Random());
-                miniboss.AddBuffNotDispelable(FUN.EliteDefenses.Random());
-                miniboss.AddBuffNotDispelable(FUN.BubblyEliteVisual);
+                if (bp != null) {
+                    //var bp = ContentManager.Elites[3].Blueprint;
+                    var miniboss = SpawnMonster(center, look, existing, Generated, bp);
+                    AddClassLevels.LevelUp(FUN.AddEliteLevels, miniboss.Descriptor, (1 + (Floor.Level / 3)) * 2);
+                    miniboss.AddBuffNotDispelable(FUN.EliteAttacks.Random());
+                    miniboss.AddBuffNotDispelable(FUN.EliteDefenses.Random());
+                    miniboss.AddBuffNotDispelable(FUN.BubblyEliteVisual);
+                }
             }
 
-            Main.CombatLog($"Combat encounter generated", GameLogStrings.Instance.DefaultColor, new TooltipTemplateEncounterGen {
+            var tooltip = new TooltipTemplateEncounterGen {
                 Monsters = Generated,
-                Scale = encounterBudgetScale
-            });
+                Budget = totalBudget,
+                MaxBudget = maxBudget
+            };
+            GauntletController.FightDetails[GauntletController.Floor.ActiveEncounter] = tooltip;
+            Main.CombatLog($"Combat encounter generated", GameLogStrings.Instance.DefaultColor, tooltip);
         }
 
         public static UnitEntityData SpawnMonster(Vector3 center, Vector3 look, List<Vector3> existing, List<string> Generated, string toSpawn) {
@@ -108,8 +126,8 @@ namespace BubbleGauntlet {
             existing.Add(pos);
 
             var unit = Game.Instance.EntityCreator.SpawnUnit(unitBp, pos, Quaternion.identity, null);
-            //unit.MarkNotOptimizableInSave();
 
+            unit.AddBuffNotDispelable(CountDeaths);
             unit.State.AddCondition(Kingmaker.UnitLogic.UnitCondition.Unlootable);
             unit.Facts.RemoveAll<EntityFact>(fact => {
                 if (fact.Blueprint.HasComponent<AddEnergyImmunity>())
@@ -125,6 +143,40 @@ namespace BubbleGauntlet {
             CombatMonsters.Add(unit);
 
             return unit;
+        }
+
+        internal static void Install() {
+            NormalFights.AddRange(MonsterDB.CombatTemplates.Values);
+
+            CountDeaths = Helpers.CreateBlueprint<BlueprintBuff>($"on-death", buff => {
+                buff.SetNameDescription("Gauntlet monster on death", "on death");
+                buff.m_Flags = BlueprintBuff.Flags.HiddenInUi;
+                buff.AddComponent<DeathActions>(death => {
+                    death.Actions = Helpers.CreateActionList(new DynamicGameAction(() => {
+                        if (CombatMonsters.All(a => a.State.IsDead)) {
+                            GauntletController.ExitCombat();
+                        }
+                    }));
+                });
+            });
+        }
+    }
+
+    public class TooltipTemplateEncounterGen : TooltipBaseTemplate {
+        public int Budget;
+        public int MaxBudget;
+        public List<string> Monsters;
+
+        public override IEnumerable<ITooltipBrick> GetBody(TooltipTemplateType type) {
+            yield return new TooltipBrickText($"Budget: {Budget} (Maximum: {MaxBudget})");
+            yield return new TooltipBrickSpace();
+            yield return new TooltipBrickText("Monsters", TooltipTextType.Bold);
+            foreach (var monster in Monsters)
+                yield return new TooltipBrickText($"• {monster}");
+        }
+
+        public override IEnumerable<ITooltipBrick> GetHeader(TooltipTemplateType type) {
+            yield return new TooltipBrickText("Encounter generation details", TooltipTextType.BoldCentered);
         }
     }
 }

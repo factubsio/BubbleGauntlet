@@ -28,6 +28,7 @@ using Kingmaker.UnitLogic.Buffs;
 using Kingmaker.UnitLogic.Mechanics;
 using Kingmaker.EntitySystem;
 using Kingmaker.UnitLogic.Abilities.Components.AreaEffects;
+using BubbleGauntlet.BlueprintCore.Utils;
 
 namespace BubbleGauntlet.Extensions {
 
@@ -37,6 +38,15 @@ namespace BubbleGauntlet.Extensions {
                 unit.LocalizedName = ScriptableObject.CreateInstance<SharedStringAsset>();
                 unit.LocalizedName.String = Helpers.CreateString(key,name);
             }
+        }
+
+        public static void Check(this object obj, string name) {
+            var errs = Validator.Check(obj);
+            if (errs.Count == 0)
+                Main.Log($"CHECK<{name}> SUCCESS");
+            else
+                Main.Log($"CHECK<{name}> FAIL:\n" + string.Join("\n", errs));
+
         }
 
         public static char Initial(this Metamagic flag) {

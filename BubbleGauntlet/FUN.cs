@@ -1,4 +1,5 @@
 ﻿using BubbleGauntlet.BlueprintCore.Utils;
+using BubbleGauntlet.Components;
 using BubbleGauntlet.Extensions;
 using BubbleGauntlet.Utilities;
 using HarmonyLib;
@@ -10,7 +11,6 @@ using Kingmaker.EntitySystem;
 using Kingmaker.EntitySystem.Entities;
 using Kingmaker.EntitySystem.Stats;
 using Kingmaker.Enums.Damage;
-using Kingmaker.Items;
 using Kingmaker.PubSubSystem;
 using Kingmaker.ResourceLinks;
 using Kingmaker.RuleSystem;
@@ -39,20 +39,6 @@ using UnityEngine;
 using static Kingmaker.Visual.Animation.Kingmaker.Actions.UnitAnimationActionCastSpell;
 
 namespace BubbleGauntlet {
-
-    public class VanguardDamageResistance : AddDamageResistancePhysical {
-        public override bool Bypassed(ComponentRuntime runtime, BaseDamage damage, ItemEntityWeapon weapon) {
-            return false;
-        }
-
-        public override bool IsStackable => true;
-
-        public override int CalculateValue(ComponentRuntime runtime) {
-            return 3 + GauntletController.Floor.Level / 2;
-        }
-
-    }
-
     public class AbilityDeliverThemedChain : AbilityDeliverChain {
 
         private string ThemedProjectile => GauntletController.Floor.DamageTheme switch {
@@ -98,13 +84,13 @@ namespace BubbleGauntlet {
 
     public class BubbleApplyThemeDamage : ContextActionDealDamage {
         public override void RunAction() {
-            if (base.Context.MaybeCaster.IsAlly(base.Target.Unit))
+            if (Context.MaybeCaster.IsAlly(Target.Unit))
                 return;
 
             DiceType type = DiceType.D4;
             int bonus = 0;
 
-            switch (base.AbilityContext.AbilityBlueprint.Animation) {
+            switch (AbilityContext.AbilityBlueprint.Animation) {
                 case CastAnimationStyle.Touch:
                     bonus = 0;
                     type = DiceType.D2;
@@ -120,20 +106,20 @@ namespace BubbleGauntlet {
             }
 
             if (GauntletController.Floor.Level < 4)
-                bonus -= -2;
-            base.AbilityContext.AbilityBlueprint.GetComponent<AbilityDeliverEffect>();
+                bonus -= 2;
+            AbilityContext.AbilityBlueprint.GetComponent<AbilityDeliverEffect>();
 
 
             var damage = new DamageInfo {
-				Dices = new DiceFormula((GauntletController.Floor.Level + 1) / 2, type),
-				Bonus = bonus,
-				PreRolledValue = null,
-				HalfBecauseSavingThrow = false,
-				Empower = false,
-				Maximize = false,
-				CriticalModifier = null,
+                Dices = new DiceFormula((GauntletController.Floor.Level + 1) / 2, type),
+                Bonus = bonus,
+                PreRolledValue = null,
+                HalfBecauseSavingThrow = false,
+                Empower = false,
+                Maximize = false,
+                CriticalModifier = null,
             };
-            this.DamageType = new DamageTypeDescription {
+            DamageType = new DamageTypeDescription {
                 Energy = GauntletController.Floor.DamageTheme,
                 Type = Kingmaker.RuleSystem.Rules.Damage.DamageType.Energy,
             };
@@ -147,7 +133,7 @@ namespace BubbleGauntlet {
             if (evt.ParentRule.IsFake)
                 return;
 
-            var friends = CombatManager.CombatMonsters.Where(m => m != base.Owner && !m.State.IsDead).ToArray();
+            var friends = CombatManager.CombatMonsters.Where(m => m != Owner && !m.State.IsDead).ToArray();
             if (friends.Length == 0)
                 return;
 
@@ -162,16 +148,29 @@ namespace BubbleGauntlet {
                 IsFake = true
             };
             var fakeCalc = new RuleCalculateDamage(fakeDeal);
-            int toShare = Context.TriggerRule<RuleCalculateDamage>(fakeCalc).CalculatedDamage.Sum(x => x.ValueWithoutReduction) - 1;
+            int toShare = Context.TriggerRule(fakeCalc).CalculatedDamage.Sum(x => x.ValueWithoutReduction);
+            toShare = (int)Math.Ceiling(toShare * 0.75f);
+            float overflow = 0;
 
-            int perFriend = toShare / friends.Length;
-            int extra = toShare % friends.Length;
+            int totalFriendHP = friends.Sum(f => f.MaxHP);
+
+            Main.Log($"Actual damage: {toShare}, Total friend hp: {totalFriendHP}");
+
             foreach (var friend in friends) {
-                int damage = perFriend;
-                if (extra > 0) {
+                float myFactor = friend.MaxHP / (float)totalFriendHP;
+                float myDamageRaw = toShare * myFactor;
+                int damage = (int)myDamageRaw;
+                float overflowed = myDamageRaw - damage;
+                float oldOverflow = overflow;
+                overflow += overflowed;
+                if (overflow > 1) {
                     damage++;
-                    extra--;
+                    overflow--;
                 }
+                Main.Log($"friend: hp:{friend.MaxHP} factor:{myFactor} raw:{myDamageRaw} damage:{damage}   (oo:{oldOverflow} + overflowed:{overflowed} = overflow:{overflow}");
+
+                if (friend.HPLeft - damage <= 0)
+                    damage = friend.HPLeft - 1;
 
                 var sharedDamage = evt.DamageBundle.First.Copy();
                 sharedDamage.CopyFrom(evt.DamageBundle.First);
@@ -183,7 +182,7 @@ namespace BubbleGauntlet {
 
             evt.DamageBundle.First.IncreaseDeclineTo(DamageDeclineType.Total);
             evt.DamageBundle.First.PreRolledValue = 0;
-            evt.DamageBundle.First.SourceFact = this.Fact;
+            evt.DamageBundle.First.SourceFact = Fact;
         }
 
         public void OnEventDidTrigger(RuleCalculateDamage evt) { }
@@ -193,34 +192,30 @@ namespace BubbleGauntlet {
         private DamageEnergyType Type => GauntletController.Floor.DamageTheme;
 
         public void OnEventAboutToTrigger(RuleCalculateDamage evt) {
-            foreach (BaseDamage baseDamage in evt.DamageBundle)
-			{
-				var energyDamage = baseDamage as EnergyDamage;
-				DamageEnergyType? nullable = (energyDamage != null) ? new DamageEnergyType?(energyDamage.EnergyType) : null;
-				DamageEnergyType type = this.Type;
-				if ((nullable.GetValueOrDefault() == type & nullable != null) && !base.Owner.State.HasCondition(UnitCondition.SuppressedEnergyImmunity))
-				{
-					baseDamage.IncreaseDeclineTo(DamageDeclineType.Total);
-				}
-			}
+            foreach (BaseDamage baseDamage in evt.DamageBundle) {
+                var energyDamage = baseDamage as EnergyDamage;
+                DamageEnergyType? nullable = energyDamage != null ? new DamageEnergyType?(energyDamage.EnergyType) : null;
+                DamageEnergyType type = Type;
+                if (nullable.GetValueOrDefault() == type & nullable != null && !Owner.State.HasCondition(UnitCondition.SuppressedEnergyImmunity)) {
+                    baseDamage.IncreaseDeclineTo(DamageDeclineType.Total);
+                }
+            }
         }
 
         public void OnEventDidTrigger(RuleCalculateDamage evt) { }
 
         public override void OnTurnOn() {
-            base.Owner.Ensure<UnitPartDamageReduction>().AddImmunity(base.Fact, this, this.Type);
+            Owner.Ensure<UnitPartDamageReduction>().AddImmunity(Fact, this, Type);
         }
 
         // Token: 0x06009F60 RID: 40800 RVA: 0x0006ACD6 File Offset: 0x00068ED6
-        public override void OnTurnOff()
-		{
-			UnitPartDamageReduction unitPartDamageReduction = base.Owner.Get<UnitPartDamageReduction>();
-			if (unitPartDamageReduction == null)
-			{
-				return;
-			}
-			unitPartDamageReduction.RemoveImmunity(base.Fact, this);
-		}
+        public override void OnTurnOff() {
+            UnitPartDamageReduction unitPartDamageReduction = Owner.Get<UnitPartDamageReduction>();
+            if (unitPartDamageReduction == null) {
+                return;
+            }
+            unitPartDamageReduction.RemoveImmunity(Fact, this);
+        }
     }
 
     public class ThemeDamageComponent : EntityFactComponentDelegate<AddInitiatorAttackWithWeaponTrigger.ComponentData>, IInitiatorRulebookHandler<RulePrepareDamage>, IRulebookHandler<RulePrepareDamage>, ISubscriber, IInitiatorRulebookSubscriber {
@@ -369,15 +364,15 @@ namespace BubbleGauntlet {
                 ThemeBuffs[energyType] = Helpers.CreateBlueprint<BlueprintBuff>($"bubble-theme-buff-{energyType.ToString().Replace(' ', '_')}", buff => {
                     buff.FxOnStart = new();
                     buff.FxOnStart.AssetId = energyType switch {
-                        DamageEnergyType.Fire => "f5eaec10b715dbb46a78890db41fa6a0",
+                        DamageEnergyType.Fire => "26fa35beb7d89bf4dafb93033941700c",
                         DamageEnergyType.Cold => "6997425ac95b2a347a261dbd4139c9a9",
                         DamageEnergyType.Sonic => "39da71647ad4747468d41920d0edd721",
                         DamageEnergyType.Electricity => "6035a889bae45f242908569a7bc25c93",
                         DamageEnergyType.Acid => "b2b0f28a5be7ee349b819925143d1e70",
                         DamageEnergyType.NegativeEnergy => "d7c1a0c281a1a784cbab128b0c7a9e7b",
-                        DamageEnergyType.Holy => "3cf209e5299921349a1c159f35cfa369",
+                        DamageEnergyType.Holy => "2014f4bf65c37b64d9609f0e87fa2e9a",
                         DamageEnergyType.Unholy => "7257fc7d2af24cb48954f376a0bb9691",
-                        DamageEnergyType.Divine => "3cf209e5299921349a1c159f35cfa369",
+                        DamageEnergyType.Divine => "2014f4bf65c37b64d9609f0e87fa2e9a",
                         _ => null
                     };
                     buff.SetNameDescription($"Gauntlet Monster ({energyType})", "Monsters in the gauntlet gain features based on the current floor theme");
@@ -433,7 +428,7 @@ namespace BubbleGauntlet {
                 chain.CanTargetPoint = false;
                 chain.EffectOnEnemy = AbilityEffectOnUnit.Harmful;
                 chain.EffectOnAlly = AbilityEffectOnUnit.None;
-                chain.Animation = Kingmaker.Visual.Animation.Kingmaker.Actions.UnitAnimationActionCastSpell.CastAnimationStyle.Touch;
+                chain.Animation = CastAnimationStyle.Touch;
                 chain.Type = AbilityType.Supernatural;
                 chain.LocalizedDuration = Helpers.EmptyString;
                 chain.LocalizedSavingThrow = Helpers.EmptyString;
@@ -461,7 +456,7 @@ namespace BubbleGauntlet {
                 cone.CanTargetPoint = false;
                 cone.EffectOnEnemy = AbilityEffectOnUnit.Harmful;
                 cone.EffectOnAlly = AbilityEffectOnUnit.None;
-                cone.Animation = Kingmaker.Visual.Animation.Kingmaker.Actions.UnitAnimationActionCastSpell.CastAnimationStyle.BreathWeapon;
+                cone.Animation = CastAnimationStyle.BreathWeapon;
                 cone.Type = AbilityType.Supernatural;
                 cone.LocalizedDuration = Helpers.EmptyString;
                 cone.LocalizedSavingThrow = Helpers.EmptyString;
@@ -483,7 +478,7 @@ namespace BubbleGauntlet {
                 nova.Range = AbilityRange.Personal;
                 nova.CanTargetSelf = true;
                 nova.Hidden = true;
-                nova.Animation = Kingmaker.Visual.Animation.Kingmaker.Actions.UnitAnimationActionCastSpell.CastAnimationStyle.Omni;
+                nova.Animation = CastAnimationStyle.Omni;
                 nova.Type = AbilityType.Supernatural;
                 nova.LocalizedDuration = Helpers.EmptyString;
                 nova.LocalizedSavingThrow = Helpers.EmptyString;
@@ -516,7 +511,9 @@ namespace BubbleGauntlet {
 
             var vanguardActualBuff = Helpers.CreateBlueprint<BlueprintBuff>("bubblegauntlet-vanguard-targetbuff", buff => {
                 buff.SetNameDescription("Bubble Shielded", "This bubble is under the protection of an elite and has DR/- equal to (3 + Floor/2).");
-                buff.AddComponent<VanguardDamageResistance>();
+                buff.AddComponent<DynamicDamageResistancePhysical>(res => {
+                    res.GauntletValue = floor => 3 + floor / 2;
+                });
             });
 
             var vanguardAreaEffect = Helpers.CreateBlueprint<BlueprintAbilityAreaEffect>("bubbelgauntlet-vanguard-area", area => {
@@ -545,7 +542,7 @@ namespace BubbleGauntlet {
             Main.Log("VANGUARD: \n" + string.Join("\n", Validator.Check(Vanguard).Select(e => $"ERROR: {e}")));
             Main.Log("VANGUARD_AREA: \n" + string.Join("\n", Validator.Check(vanguardAreaEffect).Select(e => $"ERROR: {e}")));
             Main.Log("VANGUARD_ACTUAL: \n" + string.Join("\n", Validator.Check(vanguardActualBuff).Select(e => $"ERROR: {e}")));
-            Main.Log("VANGAURD_COMPONENT: \n" + string.Join("\n", Validator.Check(vanguardActualBuff.GetComponent<VanguardDamageResistance>()).Select(e => $"ERROR: {e}")));
+            Main.Log("VANGAURD_COMPONENT: \n" + string.Join("\n", Validator.Check(vanguardActualBuff.GetComponent<DynamicDamageResistancePhysical>()).Select(e => $"ERROR: {e}")));
 
             PainShare = Helpers.CreateBlueprint<BlueprintBuff>("bubblegauntlet-pain-share", buff => {
                 buff.SetNameDescription("Pain Share", "This bubble is so well-liked that the first part of any damage dealt to it will instead be split amongst its friends");
@@ -644,12 +641,12 @@ namespace BubbleGauntlet {
             return builder;
         }
 
-        public ProgressionBuilder ForClasses(params BlueprintCharacterClassReference []clazz) {
+        public ProgressionBuilder ForClasses(params BlueprintCharacterClassReference[] clazz) {
             bp.m_Classes = clazz.Select(c => new BlueprintProgression.ClassWithLevel { m_Class = c }).ToArray();
             return this;
         }
 
-        public ProgressionBuilder AddFeatures(int level, params BlueprintFeatureBaseReference []features) {
+        public ProgressionBuilder AddFeatures(int level, params BlueprintFeatureBaseReference[] features) {
             if (!levelEntries.TryGetValue(level, out var entry)) {
                 entry = new LevelEntry { Level = level };
                 levelEntries[level] = entry;
@@ -688,7 +685,7 @@ namespace BubbleGauntlet {
             return builder;
         }
 
-        public ClassBuilder ClassSkills(params StatType [] skills) {
+        public ClassBuilder ClassSkills(params StatType[] skills) {
             bp.ClassSkills = skills;
             return this;
         }
@@ -765,7 +762,7 @@ namespace BubbleGauntlet {
             "Await input module",
             "Await event system",
         };
-        
+
         [HarmonyPatch("Log"), HarmonyPatch(new Type[] { typeof(string), typeof(object[]) }), HarmonyPrefix]
         public static bool Log(string messageFormat) {
             if (Quiet.Contains(messageFormat))
@@ -777,7 +774,7 @@ namespace BubbleGauntlet {
 
     [HarmonyPatch(typeof(UnitDescriptionHelper))]
     public static class UnitDescriptionHelper_Patch {
-        
+
         [HarmonyPatch("GetDescription"), HarmonyPatch(new Type[] { typeof(UnitEntityData), typeof(UnitEntityData), typeof(UnitEntityData) }), HarmonyPostfix]
         public static void GetDescription(UnitEntityData descriptionUnit, UnitEntityData whippingBoy, UnitEntityData sourceUnit, ref UnitDescription __result) {
             if (sourceUnit != null)
@@ -793,7 +790,7 @@ namespace BubbleGauntlet {
     }
     [HarmonyPatch(typeof(AddInitiatorAttackWithWeaponTrigger))]
     public static class HOOK_PATCH {
-        
+
         [HarmonyPatch("OnEventDidTrigger"), HarmonyPostfix]
         public static void OnEventDidTrigger(AddInitiatorAttackWithWeaponTrigger __instance) {
         }

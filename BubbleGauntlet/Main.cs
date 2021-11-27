@@ -29,6 +29,13 @@ using Kingmaker.Visual.Particles;
 using Kingmaker.Designers;
 using static Kingmaker.QA.Statistics.ExperienceGainStatistic;
 using Kingmaker.UnitLogic.Abilities;
+using Kingmaker.UnitLogic.Buffs;
+using System.IO;
+using Kingmaker.ResourceLinks;
+using Kingmaker.UnitLogic.Abilities.Blueprints;
+using BubbleGauntlet.BlueprintCore.Utils;
+using TMPro;
+using Kingmaker.Controllers.Rest;
 
 namespace BubbleGauntlet {
 
@@ -172,62 +179,58 @@ namespace BubbleGauntlet {
 
 
         public static void Run() {
-            var descendEvent = new DialogBuilder();
+            //var descendEvent = new DialogBuilder("tester");
 
-            var exitPage = descendEvent.NewPage("end-descend");
-            exitPage.BasicCue("You see the next floor ahead.");
-            exitPage.OnShow(new DynamicGameAction(() => {
-                int exp = GauntletController.Floor.Level * 500 + 500;
-                GameHelper.GainExperience(exp, null, GainType.Quest);
-            }));
-            exitPage.Answers()
-                .Add("To adventure!").Commit()
-                .Commit();
-            exitPage.Commit();
+            //var exitPage = descendEvent.NewPage("end-descend");
+            //exitPage.BasicCue("see-floor", "You see the next floor ahead.");
+            //exitPage.OnShow(new DynamicGameAction(() => {
+            //    int exp = GauntletController.Floor.Level * 500 + 500;
+            //    GameHelper.GainExperience(exp, null, GainType.Quest);
+            //}));
+            //exitPage.Answers()
+            //    .Add("To adventure!").Commit()
+            //    .Commit();
+            //exitPage.Commit();
 
-            var entryPage = descendEvent.RootPage("To adventure!");
-            var slice = EncounterSlice.MakeOpporunity_Grave();
-            var slice2 = EncounterSlice.MakeTest2();
-            slice.SetNext(slice2.EntryPoint);
-            slice2.SetNext(exitPage.Reference);
+            //var entryPage = descendEvent.RootPage("To adventure!");
+            //var slice = EncounterSlice.MakeOpporunity_Grave();
+            //var slice2 = EncounterSlice.MakeTest2();
+            //slice.SetNext(slice2.EntryPoint);
+            //slice2.SetNext(exitPage.Reference);
 
-            entryPage.BasicCue("The gauntlet extends down seemingly forever, but to keep your sanity you must take it floor by floor.");
+            //entryPage.BasicCue("intro", "The gauntlet extends down seemingly forever, but to keep your sanity you must take it floor by floor.");
 
-            entryPage.Answers()
-                .Add("Venture forth...")
-                    .ContinueWith(References.Static(slice.EntryPoint))
-                    .Commit()
-                .Commit();
-            entryPage.Commit();
+            //entryPage.Answers()
+            //    .Add("Venture forth...")
+            //        .ContinueWith(References.Static(slice.EntryPoint))
+            //        .Commit()
+            //    .Commit();
+            //entryPage.Commit();
 
-            var dialog = Helpers.CreateBlueprint<BlueprintDialog>("bubble-dialog-TEST", dialog => {
-                dialog.Conditions = new();
-                dialog.StartActions = new();
-                dialog.FinishActions = new();
-                dialog.ReplaceActions = new();
+            //var dialog = Helpers.CreateBlueprint<BlueprintDialog>("bubble-dialog-TEST", dialog => {
+            //    dialog.Conditions = new();
+            //    dialog.StartActions = new();
+            //    dialog.FinishActions = new();
+            //    dialog.ReplaceActions = new();
 
-                dialog.FirstCue = new();
-                dialog.FirstCue.Cues = new();
-                dialog.FirstCue.Cues.Add(descendEvent.Build());
-                dialog.Type = DialogType.Book;
-                dialog.TurnFirstSpeaker = true;
-                dialog.TurnPlayer = true;
-            });
+            //    dialog.FirstCue = new();
+            //    dialog.FirstCue.Cues = new();
+            //    dialog.FirstCue.Cues.Add(descendEvent.Build());
+            //    dialog.Type = DialogType.Book;
+            //    dialog.TurnFirstSpeaker = true;
+            //    dialog.TurnPlayer = true;
+            //});
 
 
-            var speaker = Helpers.CreateString("bubble-TEST-speaker", "Bubbles");
-            Game.Instance.DialogController.StartDialogWithoutTarget(dialog, speaker);
+            //var speaker = Helpers.CreateString("bubble-TEST-speaker", "Bubbles");
+            //Game.Instance.DialogController.StartDialogWithoutTarget(dialog, speaker);
         }
 
     }
 
     class GameEventHandler : IAreaHandler, IPartyCombatHandler, IWarningNotificationUIHandler, IAreaActivationHandler {
         public void HandlePartyCombatStateChanged(bool inCombat) {
-            var bubble = GauntletController.Bubble;
             ProgressIndicator.Visible = !inCombat;
-            if (!inCombat && bubble != null) {
-                GauntletController.ExitCombat();
-            }
         }
 
         void IWarningNotificationUIHandler.HandleWarning(WarningNotificationType warningType, bool addToLog) {
@@ -238,16 +241,16 @@ namespace BubbleGauntlet {
         void IAreaHandler.OnAreaBeginUnloading() { }
 
         void IAreaActivationHandler.OnAreaActivated() {
-            if (GauntletController.InBossStage) {
-                GauntletController.Boss.Begin();
-                return;
-            }
 
             try {
                 ProgressIndicator.Install();
                 GauntletController.InstallGauntletController();
             } catch (Exception e) {
                 Main.Error(e, "area-activated");
+            }
+
+            if (GauntletController.InBossStage) {
+                return;
             }
 
             Main.Log("Removing all exits");
@@ -295,21 +298,38 @@ namespace BubbleGauntlet {
             harmony.PatchAll();
 
 
+            //var obj = GameObject.Find("TMP UI SubObject [TextMeshPro/Sprite]");
+            //LogNotNull("go", obj); 
+            //var submesh = obj.GetComponentInChildren<TMP_SubMeshUI>();
+            //LogNotNull("submessh", submesh);
+            //LogNotNull("spriteAsset", submesh.spriteAsset);
+            //foreach (var x in submesh.spriteAsset.spriteCharacterTable)
+            //    Log(x.name);
+
+
             return true;
         }
+
+        static GameObject fx;
 
         static void OnUpdate(UnityModManager.ModEntry modEntry, float delta) {
 #if DEBUG && BUBBLEDEV
             if (Input.GetKeyDown(KeyCode.C) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
-                FxHelper.DestroyAllBlood();
-                foreach (var entity in Game.Instance.State.LoadedAreaState.GetAllSceneStates()
-                                                                          .Where(state => state.IsSceneLoaded)
-                                                                          .SelectMany(state => state.AllEntityData)) {
-                    Main.Log($"entit: {entity} -> {entity.GetType()}");
-                }
+                GauntletController.BeginBossStage(ContentManager.MinorBosses["SeasonalHags"]);
             }
             if (Input.GetKeyDown(KeyCode.I) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
-                GauntletController.BeginBossStage(ContentManager.MinorBosses["SeasonalHags"]);
+                if (fx != null)
+                    FxHelper.Stop(fx);
+
+                string nextBuff = File.ReadAllText("D:/buff.txt");
+                if (nextBuff.Contains(':'))
+                    nextBuff = nextBuff.Split(':')[1];
+                PrefabLink link = new PrefabLink { AssetId = nextBuff };
+
+                GameObject prefab = link.Load(false);
+                fx = FxHelper.SpawnFxOnUnit(prefab, Game.Instance.Player.MainCharacter.Value.View, null, default);
+                fx.ChildObject("GroundFX").GetComponent<SnapToLocator>().DontAttach = false;
+                fx.transform.localScale *= 0.75f;
             }
             if (Input.GetKeyDown(KeyCode.D) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
                 Blueprints.WriteBlueprints("Blueprints.json");
@@ -318,8 +338,20 @@ namespace BubbleGauntlet {
                 CleanUpArena();
             }
             if (Input.GetKeyDown(KeyCode.K) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
-                ProgressIndicator.Install();
-                CleanUpArena();
+                if (GauntletController.InBossStage) {
+                    ProgressIndicator.Visible = false;
+                    CheatsCombat.Heal();
+                    foreach (var unit in Game.Instance.SelectionCharacter.ActualGroup) {
+                        var status = new RestStatus();
+                        unit.Resurrect();
+                        RestController.HealAndApplyRest(unit, status);
+                    }
+
+                    Game.Instance.Teleport(GauntletController.Boss.Map.AreaEnter, true);
+
+                    GauntletController.Boss.Reset();
+                    GauntletController.Boss.Begin();
+                }
             }
             if (Input.GetKeyDown(KeyCode.B) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
                 modEntry.GetType().GetMethod("Reload", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(modEntry, new object[] { });
@@ -420,6 +452,7 @@ namespace BubbleGauntlet {
         internal static void LogNotNull(string v, object obj) {
             Main.Log($"{v} not-null: {obj != null}");
         }
+
     }
 
     public struct Weighted<T> : Utilities.IWeighted {

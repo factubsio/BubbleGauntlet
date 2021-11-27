@@ -26,6 +26,20 @@ namespace BubbleGauntlet {
         Shop,
     }
 
+    public static class EncounterExtensions {
+        public static bool IsFight(this EncounterType type) => type == EncounterType.Fight || type == EncounterType.EliteFight;
+        public static string Render(this EncounterType type) => type switch {
+            EncounterType.None => "A future encounter",
+            EncounterType.Fight => "fight",
+            EncounterType.EliteFight => "fight an elite",
+            EncounterType.Rest => "take a nap",
+            EncounterType.Shop => "visit a magical vendor",
+            _ => throw new NotImplementedException(),
+        };
+    }
+
+
+
     public class EncounterTemplate {
 
         public readonly EncounterType Type;
@@ -234,20 +248,6 @@ namespace BubbleGauntlet {
         }
     }
 
-    public class TooltipTemplateEncounterGen : TooltipBaseTemplate {
-        public List<string> Monsters;
-        public float Scale;
-        public override IEnumerable<ITooltipBrick> GetBody(TooltipTemplateType type) {
-            yield return new TooltipBrickText($"Budget scale [0.6-1.5]: {Scale:0.0}");
-            yield return new TooltipBrickText("Monsters", TooltipTextType.Bold);
-            foreach (var monster in Monsters)
-                yield return new TooltipBrickText(monster);
-        }
-
-        public override IEnumerable<ITooltipBrick> GetHeader(TooltipTemplateType type) {
-            yield return new TooltipBrickText("Encounter generation details", TooltipTextType.BoldCentered);
-        }
-    }
 
     internal struct VendorPreference {
         public int BiasDirection;

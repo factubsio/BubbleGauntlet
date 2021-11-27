@@ -15,30 +15,31 @@ namespace BubbleGauntlet.Config {
             LoadSettings("AddedContent.json", ref AddedContent);
             LoadSettings("Blueprints.json", ref Blueprints);
         }
-        private static void LoadSettings<T>(string fileName, ref T setting) where T : IUpdatableSettings {
+        public static void LoadSettings<T>(string fileName, ref T setting, bool fromFile = false) {
             var assembly = Assembly.GetExecutingAssembly();
             string userConfigFolder = ModEntry.Path + "UserSettings";
             Directory.CreateDirectory(userConfigFolder);
             var resourcePath = $"BubbleGauntlet.Config.{fileName}";
-            var userPath = $"{userConfigFolder}{Path.DirectorySeparatorChar}{fileName}";
 
+            StreamReader reader;
+            if (fromFile)
+                reader = File.OpenText(Path.Combine(userConfigFolder, fileName));
+            else {
+                Stream stream = assembly.GetManifestResourceStream(resourcePath);
+                reader = new StreamReader(stream);
+            }
 
-            using (Stream stream = assembly.GetManifestResourceStream(resourcePath))
-            using (StreamReader reader = new StreamReader(stream)) {
-                setting = JsonConvert.DeserializeObject<T>(reader.ReadToEnd());
-            }
-            if (File.Exists(userPath)) {
-                using (StreamReader reader = File.OpenText(userPath)) {
-                    try {
-                        T userSettings = JsonConvert.DeserializeObject<T>(reader.ReadToEnd());
-                        setting.OverrideSettings(userSettings);
-                    } catch {
-                        Main.Error("Failed to load user settings. Settings will be rebuilt.");
-                        try { File.Copy(userPath, userConfigFolder + $"{Path.DirectorySeparatorChar}BROKEN_{fileName}", true); } catch { Main.Error("Failed to archive broken settings."); }
-                    }
-                }
-            }
-            File.WriteAllText(userPath, JsonConvert.SerializeObject(setting, Formatting.Indented));
+            JsonSerializer serializer = new JsonSerializer {
+                NullValueHandling = NullValueHandling.Include,
+                Formatting = Formatting.Indented
+            };
+            var jReader = new JsonTextReader(reader);
+            setting = serializer.Deserialize<T>(jReader);
+
+            reader.Close();
+            reader.Dispose();
+
         }
+
     }
 }

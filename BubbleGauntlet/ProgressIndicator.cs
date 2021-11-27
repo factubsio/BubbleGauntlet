@@ -239,7 +239,7 @@ namespace BubbleGauntlet {
         }
     }
     public class TooltipEncounterTemplate : TooltipBaseTemplate {
-        private int index;
+        private readonly int index;
 
         private static ITooltipBrick FutureEncounter => new TooltipBrickText("A future encounter");
 
@@ -253,7 +253,16 @@ namespace BubbleGauntlet {
         public override IEnumerable<ITooltipBrick> GetBody(TooltipTemplateType type) {
             var state = GauntletController.Floor;
             if (index <= state.ActiveEncounter) {
-                yield return new TooltipBrickText("You chose to " + state.Encounters[index].ToString());
+                yield return new TooltipBrickText("You chose to " + state.Encounters[index].Render());
+                if (state.Encounters[index].IsFight()) {
+                    yield return new TooltipBrickSpace();
+                    yield return new TooltipBrickText("Encounter Details:");
+                    var maybeTooltip = GauntletController.FightDetails[index];
+                    if (maybeTooltip != null) {
+                        foreach (var brick in maybeTooltip.GetBody(type))
+                            yield return brick;
+                    }
+                }
             } else {
                 yield return FutureEncounter;
             }

@@ -15,34 +15,46 @@ namespace BubbleGauntlet {
 
     public class BubbleID {
         private static int next = 1;
-        public static int Get => next++;
+        [Obsolete]
+        public static string Get => $"{Context}-{next++}";
+
+        internal static string Context = "global";
     }
 
 
+    public interface IHaveContextName {
+        string ContextName { get; }
+        string ContextPath { get; }
+    }
 
     public interface IAnswerHolder : IMustComplete {
         BlueprintAnswerBaseReference AnswerList { get; set; }
     }
 
-    public class DummyAnswerHolder : IAnswerHolder {
+    public class DummyAnswerHolder : IAnswerHolder, IHaveContextName {
         public BlueprintAnswerBaseReference AnswerList { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
 
         public bool Completed => true;
         public string Description => "dummy";
+        public string ContextName => "Dummy";
+        public string ContextPath => "Dummy";
     }
 
-    public class AnswerListBuilder<T> : Builder<BlueprintAnswersList, BlueprintAnswerBaseReference> where T : IAnswerHolder {
-
+    public class AnswerListBuilder<T> : Builder<BlueprintAnswersList, BlueprintAnswerBaseReference> where T : IAnswerHolder, IHaveContextName {
         public List<BlueprintAnswer> answerList = new();
         T parent;
+        public string ContextName { get; private set; }
+        public string ContextPath => $"{parent.ContextPath}/{ContextName}";
 
-        public AnswerListBuilder(DialogBuilder root, T parent) : base(root) {
+        public AnswerListBuilder(string name, DialogBuilder root, T parent) : base(name, root) {
+            ContextName = name;
             this.parent = parent;
             Description = $"answers_for_{parent?.Description}";
         }
 
-        public AnswerBuilder<T> Add(string answerText) {
-            return new AnswerBuilder<T>(root, BubbleID.Get, answerText, this);
+        public AnswerBuilder<T> Add(string name, string answerText) {
+            return new AnswerBuilder<T>(root, name, answerText, this);
         }
 
         public AnswerListBuilder<T> AddExisting(BlueprintAnswer answer) {
@@ -51,7 +63,7 @@ namespace BubbleGauntlet {
         }
 
         public T Commit() {
-            Blueprint = Helpers.CreateBlueprint<BlueprintAnswersList>($"bubble-anwerlist-{id}", answers => {
+            Blueprint = Helpers.CreateBlueprint<BlueprintAnswersList>($"bubble-answerlist://{ContextPath}", answers => {
                 answers.Conditions = new();
                 answers.Answers = answerList.Select(a => a.ToReference<BlueprintAnswerBaseReference>()).ToList();
             });
@@ -62,15 +74,16 @@ namespace BubbleGauntlet {
 
     }
 
-    public class AnswerBuilder<T> where T : IAnswerHolder {
+    public class AnswerBuilder<T> where T : IAnswerHolder, IHaveContextName {
         List<GameAction> actions = new();
         private DialogBuilder root;
-        int key;
         string text;
         private AnswerListBuilder<T> parent;
         private List<IReferenceBuilder<BlueprintCueBaseReference>> next = new();
         private Condition[] conditions;
         private Condition[] selectCondition;
+        public string ContextName { get; private set; }
+        public string ContextPath => $"{parent.ContextPath}/{ContextName}";
 
         public AnswerBuilder<T> AddAction(GameAction action) {
             actions.Add(action);
@@ -88,16 +101,16 @@ namespace BubbleGauntlet {
         //}
 
 
-        public AnswerBuilder(DialogBuilder root, int key, string text, AnswerListBuilder<T> parent) {
+        public AnswerBuilder(DialogBuilder root, string name, string text, AnswerListBuilder<T> parent) {
+            ContextName = name;
             this.root = root;
-            this.key = key;
             this.text = text;
             this.parent = parent;
         }
 
         private BlueprintAnswer Create() {
-            BlueprintAnswer item = Helpers.CreateBlueprint<BlueprintAnswer>($"bubble-answer-{key}", answer => {
-                answer.Text = Helpers.CreateString($"bubble-answer-{key}.text", text);
+            BlueprintAnswer item = Helpers.CreateBlueprint<BlueprintAnswer>($"bubble-answer://{ContextPath}", answer => {
+                answer.Text = Helpers.CreateString($"bubble-answer-{ContextPath}.text", text);
                 answer.NextCue = new();
                 answer.NextCue.Cues = new();
                 answer.OnSelect = new();
@@ -200,7 +213,6 @@ namespace BubbleGauntlet {
 
     public abstract class Builder<T, TRef> : IReferenceBuilder<TRef>, IMustComplete where T : SimpleBlueprint where TRef : BlueprintReferenceBase, new() {
         public T Blueprint;
-        protected readonly int id;
         protected readonly DialogBuilder root;
         public String Description { get; protected set; }
 
@@ -224,10 +236,9 @@ namespace BubbleGauntlet {
 
         }
 
-        protected Builder(DialogBuilder root) {
+        protected Builder(string name, DialogBuilder root) {
             this.root = root;
-            id = BubbleID.Get;
-            Description = $"{id}";
+            Description = name;
         }
     }
 
@@ -238,27 +249,44 @@ namespace BubbleGauntlet {
     }
 
     public class DialogBuilder {
+        private static HashSet<string> seenNames = new();
+        public readonly string ContextName;
         public List<Action> Fixups = new();
         public List<IMustComplete> Completable = new();
         public CueBuilder root { private set; get; }
         public PageBuilder rootPage { private set; get; }
 
-        public CheckBuilder NewCheck(StatType type) {
-            return new CheckBuilder(this, type);
+        public DialogBuilder(string name) {
+            if (BubbleID.Context != "global") {
+                Main.Log($"*** ERROR: trying to open dialog builder context ({name}) while context is not global, it is ({BubbleID.Context})");
+            }
+            ContextName = name;
+            BubbleID.Context = name;
+
+        }
+
+
+        public CheckBuilder NewCheck(string name, StatType type) {
+            return new CheckBuilder(name, this, type);
         }
 
         public CueBuilder Root(string text) {
-            root = Cue(text);
+            root = Cue("root", text);
             return root;
         }
 
-        public CueBuilder Cue(string text) {
-            var builder = new CueBuilder(this, text);
+        public CueBuilder Cue(string name, string text) {
+            var builder = new CueBuilder(name, this, text);
             Completable.Add(builder);
             return builder;
         }
 
         public BlueprintCueBaseReference Build() {
+            if (BubbleID.Context != ContextName) {
+                Main.Log($"*** ERROR: trying to close dialog builder context ({ContextName}) while context is not mine, it is ({BubbleID.Context})");
+            }
+            BubbleID.Context = "global";
+
             foreach (var c in Completable.Where(c => !c.Completed)) {
                 Main.Log($"*** ERROR: something is incomplete: {c}:{c.Description}");
             }
@@ -279,17 +307,21 @@ namespace BubbleGauntlet {
         }
 
         internal PageBuilder NewPage(string title) {
-            var page = new PageBuilder(this, title);
+            var page = new PageBuilder(title, this, title);
             Completable.Add(page);
             return page;
 
         }
     }
 
-    public class CheckBuilder : Builder<BlueprintCheck, BlueprintCueBaseReference> {
-        public CheckBuilder(DialogBuilder root, StatType type) : base(root) {
+    public class CheckBuilder : Builder<BlueprintCheck, BlueprintCueBaseReference>, IHaveContextName {
+        private readonly IHaveContextName parent;
+        public string ContextName { get; private set; }
+        public string ContextPath => $"{root.ContextName}/{ContextName}";
+
+        public CheckBuilder(string name, DialogBuilder root, StatType type) : base(name, root) {
             this.type = type;
-            Description = $"check-{type}";
+            Description = $"check-{ContextPath}";
         }
 
         private StatType type;
@@ -300,7 +332,7 @@ namespace BubbleGauntlet {
         private int dc = 10;
 
         public void Commit() {
-            Blueprint = Helpers.CreateBlueprint<BlueprintCheck>($"bubble-check-{id}", check => {
+            Blueprint = Helpers.CreateBlueprint<BlueprintCheck>($"bubble-check://{ContextPath}", check => {
                 check.Conditions = new();
                 if (conditions != null)
                     check.Conditions.Conditions = conditions;
@@ -357,31 +389,34 @@ namespace BubbleGauntlet {
         }
     }
 
-    public class PageBuilder : Builder<BlueprintBookPage, BlueprintCueBaseReference>, IAnswerHolder {
+    public class PageBuilder : Builder<BlueprintBookPage, BlueprintCueBaseReference>, IAnswerHolder, IHaveContextName {
         public BlueprintAnswerBaseReference AnswerList { get; set; }
         private string text;
         private List<BlueprintCueBaseReference> cues = new();
         private Condition[] conditions;
         private ActionList OnShowActions = new();
+        public string ContextName { get; private set; }
+        public string ContextPath => $"{root.ContextName}/{ContextName}";
 
-        public PageBuilder(DialogBuilder root, string title) : base(root) {
+        public PageBuilder(string name, DialogBuilder root, string title) : base(name, root) {
+            ContextName = name;
             this.text = title;
             Description = title;
         }
 
         public AnswerListBuilder<PageBuilder> Answers() {
-            var builder = new AnswerListBuilder<PageBuilder>(root, this);
+            var builder = new AnswerListBuilder<PageBuilder>("answerlist", root, this);
             root.Completable.Add(builder);
             return builder;
         }
 
         public void Commit() {
-            Blueprint = Helpers.CreateBlueprint<BlueprintBookPage>($"bubble-cue-{id}", page => {
+            Blueprint = Helpers.CreateBlueprint<BlueprintBookPage>($"bubble-page://{ContextPath}", page => {
                 page.Answers = new();
                 if (AnswerList != null) {
                     page.Answers.Add(AnswerList);
                 }
-                page.Title = Helpers.CreateString($"bubble-cue-{id}.text", text);
+                page.Title = Helpers.CreateString($"bubble-cue-{ContextPath}.text", text);
                 page.OnShow = OnShowActions;
                 page.Conditions = new();
                 if (this.conditions != null)
@@ -393,16 +428,16 @@ namespace BubbleGauntlet {
             Complete();
         }
 
-        public CueBuilder Cue(string text) {
-            var cue = root.Cue(text);
+        public CueBuilder Cue(string name, string text) {
+            var cue = root.Cue(name, text);
             root.Fixups.Add(() => {
                 cues.Add(cue.Reference);
             });
             return cue;
         }
 
-        public PageBuilder BasicCue(string text) {
-            Cue(text).Commit();
+        public PageBuilder BasicCue(string name, string text) {
+            Cue(name, text).Commit();
             return this;
         }
 
@@ -418,7 +453,7 @@ namespace BubbleGauntlet {
 
         internal PageBuilder ContinueWith(IReferenceBuilder<BlueprintCueBaseReference> next) {
             Answers()
-                .Add("continue")
+                .Add("continue", "continue")
                     .ContinueWith(next)
                     .Commit()
                 .Commit();
@@ -430,34 +465,37 @@ namespace BubbleGauntlet {
         }
     }
 
-    public class CueBuilder : Builder<BlueprintCue, BlueprintCueBaseReference>, IAnswerHolder {
+    public class CueBuilder : Builder<BlueprintCue, BlueprintCueBaseReference>, IAnswerHolder, IHaveContextName {
         public BlueprintAnswerBaseReference AnswerList { get; set; }
         private string text;
         private GameAction[] stopActions;
         private ConditionsChecker conditions = new();
         private BlueprintUnitReference speaker;
         private bool focusSpeaker;
+        public string ContextName { get; private set; }
+        public string ContextPath => $"{root.ContextName}/{ContextName}";
 
-        public CueBuilder(DialogBuilder root, string text) : base(root) {
+        public CueBuilder(string contextName, DialogBuilder root, string text) : base(contextName, root) {
+            ContextName = contextName;
             this.text = text;
             Description = text;
         }
 
         public AnswerListBuilder<CueBuilder> Answers() {
-            var builder = new AnswerListBuilder<CueBuilder>(root, this);
+            var builder = new AnswerListBuilder<CueBuilder>("answers", root, this);
             root.Completable.Add(builder);
             return builder;
         }
 
         public void Commit() {
-            Blueprint = Helpers.CreateBlueprint<BlueprintCue>($"bubble-cue-{id}", cue => {
+            Blueprint = Helpers.CreateBlueprint<BlueprintCue>($"bubble-cue://{ContextPath}", cue => {
                 cue.Answers = new();
                 if (AnswerList != null) {
                     cue.Answers.Add(AnswerList);
                 }
                 cue.Continue = new();
                 cue.Continue.Cues = new();
-                cue.Text = Helpers.CreateString($"bubble-cue-{id}.text", text);
+                cue.Text = Helpers.CreateString($"bubble-cue-{ContextPath}.text", text);
                 cue.Speaker = new();
                 if (speaker == null)
                     cue.Speaker.NoSpeaker = true;

@@ -1,4 +1,6 @@
-﻿using Kingmaker.ElementsSystem;
+﻿using Kingmaker;
+using Kingmaker.ElementsSystem;
+using Kingmaker.EntitySystem;
 using Kingmaker.Enums.Damage;
 using Kingmaker.UnitLogic;
 using Kingmaker.Utility;
@@ -12,14 +14,13 @@ using static BubbleGauntlet.GauntletController;
 
 namespace BubbleGauntlet {
 
-
     public class EncounterState {
         [JsonProperty]
         public int Remaining = 0;
     }
 
 
-    public class Gauntlet : UnitPart {
+    public class Gauntlet : EntityPart<Player> {
         [JsonProperty]
         public FloorState Floor = new();
     }
@@ -60,6 +61,9 @@ namespace BubbleGauntlet {
                 kv.Value.Remaining = EncounterTemplate.Get(kv.Key).Count;
             EncountersRemaining = TotalEncounters;
             ActiveEncounter = 0;
+            for (int i = 0; i < Encounters.Length; i++) {
+                Encounters[i] = EncounterType.None;
+            }
             GauntletController.EnterFloor();
         }
 

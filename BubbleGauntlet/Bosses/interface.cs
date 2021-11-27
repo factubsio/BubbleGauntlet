@@ -10,6 +10,7 @@ namespace BubbleGauntlet.Bosses {
         string Name { get; }
 
         public void Begin();
+        public void Reset();
 
         public AreaMap Map { get; }
     }
