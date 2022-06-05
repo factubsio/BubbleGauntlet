@@ -1,5 +1,4 @@
-﻿using BubbleGauntlet.BlueprintCore.Utils;
-using BubbleGauntlet.Components;
+﻿using BubbleGauntlet.Components;
 using BubbleGauntlet.Extensions;
 using BubbleGauntlet.Utilities;
 using HarmonyLib;
@@ -180,7 +179,7 @@ namespace BubbleGauntlet {
                 Context.TriggerRule(damageFriend);
             }
 
-            evt.DamageBundle.First.IncreaseDeclineTo(DamageDeclineType.Total);
+            evt.DamageBundle.First.AddDecline(new(DamageDeclineType.Total, this));
             evt.DamageBundle.First.PreRolledValue = 0;
             evt.DamageBundle.First.SourceFact = Fact;
         }
@@ -193,11 +192,10 @@ namespace BubbleGauntlet {
 
         public void OnEventAboutToTrigger(RuleCalculateDamage evt) {
             foreach (BaseDamage baseDamage in evt.DamageBundle) {
-                var energyDamage = baseDamage as EnergyDamage;
-                DamageEnergyType? nullable = energyDamage != null ? new DamageEnergyType?(energyDamage.EnergyType) : null;
+                DamageEnergyType? nullable = baseDamage is EnergyDamage energyDamage ? new DamageEnergyType?(energyDamage.EnergyType) : null;
                 DamageEnergyType type = Type;
                 if (nullable.GetValueOrDefault() == type & nullable != null && !Owner.State.HasCondition(UnitCondition.SuppressedEnergyImmunity)) {
-                    baseDamage.IncreaseDeclineTo(DamageDeclineType.Total);
+                    baseDamage.AddDecline(new(DamageDeclineType.Total, this));
                 }
             }
         }
@@ -539,10 +537,10 @@ namespace BubbleGauntlet {
                 });
             });
 
-            Main.Log("VANGUARD: \n" + string.Join("\n", Validator.Check(Vanguard).Select(e => $"ERROR: {e}")));
-            Main.Log("VANGUARD_AREA: \n" + string.Join("\n", Validator.Check(vanguardAreaEffect).Select(e => $"ERROR: {e}")));
-            Main.Log("VANGUARD_ACTUAL: \n" + string.Join("\n", Validator.Check(vanguardActualBuff).Select(e => $"ERROR: {e}")));
-            Main.Log("VANGAURD_COMPONENT: \n" + string.Join("\n", Validator.Check(vanguardActualBuff.GetComponent<DynamicDamageResistancePhysical>()).Select(e => $"ERROR: {e}")));
+            //Main.Log("VANGUARD: \n" + string.Join("\n", Validator.Check(Vanguard).Select(e => $"ERROR: {e}")));
+            //Main.Log("VANGUARD_AREA: \n" + string.Join("\n", Validator.Check(vanguardAreaEffect).Select(e => $"ERROR: {e}")));
+            //Main.Log("VANGUARD_ACTUAL: \n" + string.Join("\n", Validator.Check(vanguardActualBuff).Select(e => $"ERROR: {e}")));
+            //Main.Log("VANGAURD_COMPONENT: \n" + string.Join("\n", Validator.Check(vanguardActualBuff.GetComponent<DynamicDamageResistancePhysical>()).Select(e => $"ERROR: {e}")));
 
             PainShare = Helpers.CreateBlueprint<BlueprintBuff>("bubblegauntlet-pain-share", buff => {
                 buff.SetNameDescription("Pain Share", "This bubble is so well-liked that the first part of any damage dealt to it will instead be split amongst its friends");

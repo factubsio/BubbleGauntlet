@@ -88,12 +88,10 @@ namespace BubbleGauntlet {
                 if (goldBefore < Game.Instance.Player.GetCustomCompanionCost())
                     return;
 
-                Game.Instance.Player.CreateCustomCompanion(() => {
+                Game.Instance.Player.CreateCustomCompanion(toAdd => {
 
                     if (Game.Instance.Player.Party.Count >= 6)
                         return;
-
-                    var toAdd = Game.Instance.LevelUpController.Unit;
 
                     if (toAdd == null)
                         return;
@@ -309,6 +307,13 @@ namespace BubbleGauntlet {
             if (Installed)
                 return;
             Installed = true;
+
+            Main.Log("Fiddling sourceror start spells");
+
+            BP.Get<BlueprintFeature>("abb8062387164704bf1b5816d5a69a48").GetComponent<AddClassLevels>().m_SelectSpells[0] = BP.Ref<BlueprintAbilityReference>("95851f6e85fe87d4190675db0419d112");
+            BP.Get<BlueprintFeature>("a2b6737f1e2162c40951c1b26f19428d").GetComponent<AddClassLevels>().m_SelectSpells[0] = BP.Ref<BlueprintAbilityReference>("95851f6e85fe87d4190675db0419d112");
+            BP.Get<BlueprintFeature>("e2150052ef332584db8a9ad9db0290a5").GetComponent<LearnSpells>().m_Spells[0] = BP.Ref<BlueprintAbilityReference>("95851f6e85fe87d4190675db0419d112");
+            Main.Log("done");
 
             Main.Log("Initializing Gauntlet Blueprints");
 

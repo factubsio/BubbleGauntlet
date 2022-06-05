@@ -2,6 +2,7 @@
 using Kingmaker;
 using Kingmaker.Blueprints.Area;
 using Kingmaker.RandomEncounters.Settings;
+using Kingmaker.ResourceLinks;
 using Kingmaker.View;
 using System;
 using System.Collections.Generic;
@@ -30,7 +31,7 @@ namespace BubbleGauntlet {
             var areaRE = BP.Get<BlueprintRandomEncounter>(re);
             map.AreaEnter = areaRE.AreaEntrance;
             map.Area = map.AreaEnter.Area;
-            map.Area.LoadingScreenSprites.Add(MapManager.BGSprite);
+            //map.Area.LoadingScreenSprites.Add(MapManager.BGSprite);
             map.Area.CampingSettings.CampingAllowed = false;
             return map;
         }
@@ -39,8 +40,8 @@ namespace BubbleGauntlet {
             AreaMap map = new();
             map.AreaEnter = BP.Get<BlueprintAreaEnterPoint>(id);
             map.Area = map.AreaEnter.Area;
-            map.Area.LoadingScreenSprites.Clear();
-            map.Area.LoadingScreenSprites.Add(MapManager.BGSprite);
+            //map.Area.LoadingScreenSprites.Clear();
+            //map.Area.LoadingScreenSprites.Add(MapManager.BGSprite);
             map.Area.CampingSettings.CampingAllowed = false;
             return map;
         }

@@ -33,9 +33,21 @@ using Kingmaker.UnitLogic.Buffs;
 using System.IO;
 using Kingmaker.ResourceLinks;
 using Kingmaker.UnitLogic.Abilities.Blueprints;
-using BubbleGauntlet.BlueprintCore.Utils;
 using TMPro;
 using Kingmaker.Controllers.Rest;
+using Kingmaker.Blueprints;
+using Kingmaker.UI.Selection;
+using Kingmaker.Armies.TacticalCombat;
+using Kingmaker.Visual.Decals;
+using Kingmaker.Visual;
+using Kingmaker.TurnBasedMode;
+using Owlcat.Runtime.Core.Math;
+using Owlcat.Runtime.Core.Utils;
+using TurnBased.Controllers;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Kingmaker.UnitLogic.ActivatableAbilities;
+using BubbleGauntlet.Extensions;
 
 namespace BubbleGauntlet {
 
@@ -280,32 +292,36 @@ namespace BubbleGauntlet {
 #if DEBUG
             modEntry.OnUnload = OnUnload;
 #endif
-            CheatsCommon.SendAnalyticEvents?.Set(false);
-            modEntry.OnUpdate = OnUpdate;
-            ModSettings.ModEntry = modEntry;
-            ModPath = modEntry.Path;
-            Main.Log("LOADING");
+            try {
+                CheatsCommon.SendAnalyticEvents?.Set(false);
+                modEntry.OnUpdate = OnUpdate;
+                ModSettings.ModEntry = modEntry;
+                ModPath = modEntry.Path;
+                Main.Log("LOADING");
 
-            BubbleTemplates.AddAll();
-            ModSettings.LoadAllSettings();
+                BubbleTemplates.AddAll();
+                ModSettings.LoadAllSettings();
 
-            EventBus.Subscribe(GameStartHijacker);
+                EventBus.Subscribe(GameStartHijacker);
 
-            if (UnityModManager.gameVersion.Minor == 1)
-                UIHelpers.WidgetPaths = new WidgetPaths_1_1();
-            else
-                UIHelpers.WidgetPaths = new WidgetPaths_1_0();
-            harmony.PatchAll();
+                if (UnityModManager.gameVersion.Minor == 1)
+                    UIHelpers.WidgetPaths = new WidgetPaths_1_1();
+                else
+                    UIHelpers.WidgetPaths = new WidgetPaths_1_0();
+                harmony.PatchAll();
 
+                if (ResourcesLibrary.s_Initialized) {
+                    Main.Log("YES initialized");
+                } else {
+                    Main.Log("NO initialized");
+                }
+            } catch (Exception e) {
+                Error(e, "loading");
+            }
 
-            //var obj = GameObject.Find("TMP UI SubObject [TextMeshPro/Sprite]");
-            //LogNotNull("go", obj); 
-            //var submesh = obj.GetComponentInChildren<TMP_SubMeshUI>();
-            //LogNotNull("submessh", submesh);
-            //LogNotNull("spriteAsset", submesh.spriteAsset);
-            //foreach (var x in submesh.spriteAsset.spriteCharacterTable)
-            //    Log(x.name);
-
+#if BUBBLEDEV
+            Main.Log("BUBBLEDEV");
+#endif
 
             return true;
         }
@@ -318,24 +334,25 @@ namespace BubbleGauntlet {
                 GauntletController.BeginBossStage(ContentManager.MinorBosses["SeasonalHags"]);
             }
             if (Input.GetKeyDown(KeyCode.I) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
-                if (fx != null)
-                    FxHelper.Stop(fx);
 
-                string nextBuff = File.ReadAllText("D:/buff.txt");
-                if (nextBuff.Contains(':'))
-                    nextBuff = nextBuff.Split(':')[1];
-                PrefabLink link = new PrefabLink { AssetId = nextBuff };
+                //if (fx != null)
+                //    FxHelper.Stop(fx);
 
-                GameObject prefab = link.Load(false);
-                fx = FxHelper.SpawnFxOnUnit(prefab, Game.Instance.Player.MainCharacter.Value.View, null, default);
-                fx.ChildObject("GroundFX").GetComponent<SnapToLocator>().DontAttach = false;
-                fx.transform.localScale *= 0.75f;
+                //string nextBuff = File.ReadAllText("D:/buff.txt");
+                //if (nextBuff.Contains(':'))
+                //    nextBuff = nextBuff.Split(':')[1];
+                //PrefabLink link = new PrefabLink { AssetId = nextBuff };
+
+                //GameObject prefab = link.Load(false);
+                //fx = FxHelper.SpawnFxOnUnit(prefab, Game.Instance.Player.MainCharacter.Value.View, null, default);
+                //fx.ChildObject("GroundFX").GetComponent<SnapToLocator>().DontAttach = false;
+                //fx.transform.localScale *= 0.75f;
             }
             if (Input.GetKeyDown(KeyCode.D) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
                 Blueprints.WriteBlueprints("Blueprints.json");
             }
             if (Input.GetKeyDown(KeyCode.L) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
-                CleanUpArena();
+                //CleanUpArena();
             }
             if (Input.GetKeyDown(KeyCode.K) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
                 if (GauntletController.InBossStage) {
@@ -387,7 +404,6 @@ namespace BubbleGauntlet {
             EventBus.Unsubscribe(GameStartHijacker);
             BP.RemoveModBlueprints();
             ProgressIndicator.Uninstall();
-
 
             return true;
         }

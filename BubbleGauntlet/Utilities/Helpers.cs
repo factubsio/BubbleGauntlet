@@ -28,6 +28,7 @@ using Kingmaker.DialogSystem.Blueprints;
 using Kingmaker.UnitLogic.Buffs;
 using Kingmaker.EntitySystem.Entities;
 using Kingmaker.UnitLogic;
+using System.Text.RegularExpressions;
 
 namespace BubbleGauntlet.Utilities {
     public class EntryComparer : IComparer<(int begin, int end)> {
@@ -85,6 +86,16 @@ namespace BubbleGauntlet.Utilities {
 
 
     public static class Helpers {
+        private static readonly Regex stripper = new(@"[^A-Za-z_]");
+        public static LocalizedString Loc(this string str, string key = null) {
+            if (key == null)
+                key = "bubble-str://" + stripper.Replace(str, "");
+            return CreateString(key, str);
+        }
+        public static string TrimLines(this string str) {
+            var lines = str.Split('\n');
+            return string.Join("\n", lines.Select(l => l.Trim()));
+        }
         public static T Create<T>(Action<T> init = null) where T : new() {
             var result = new T();
             init?.Invoke(result);
@@ -188,27 +199,24 @@ namespace BubbleGauntlet.Utilities {
         }
 #endif
 
-        // All localized strings created in this mod, mapped to their localized key. Populated by CreateString.
-        static Dictionary<String, LocalizedString> textToLocalizedString = new Dictionary<string, LocalizedString>();
+            // All localized strings created in this mod, mapped to their localized key. Populated by CreateString.
+        static readonly Dictionary<String, LocalizedString> textToLocalizedString = new();
         public static LocalizedString CreateString(string key, string value) {
             // See if we used the text previously.
             // (It's common for many features to use the same localized text.
             // In that case, we reuse the old entry instead of making a new one.)
-            LocalizedString localized;
-            if (textToLocalizedString.TryGetValue(value, out localized)) {
+            if (textToLocalizedString.TryGetValue(value, out var localized)) {
                 return localized;
             }
-            var strings = LocalizationManager.CurrentPack.Strings;
-            String oldValue;
-            if (strings.TryGetValue(key, out oldValue) && value != oldValue) {
+
 #if DEBUG
+            var current = LocalizationManager.CurrentPack.GetText(key, false);
+            if (current != "" && current != value) {
                 Main.LogDebug($"Info: duplicate localized string `{key}`, different text.");
-#endif
             }
-            strings[key] = value;
-            localized = new LocalizedString {
-                m_Key = key
-            };
+#endif
+            LocalizationManager.CurrentPack.PutString(key, value);
+            localized = new LocalizedString { m_ShouldProcess = false, m_Key = key };
             textToLocalizedString[value] = localized;
             return localized;
         }

@@ -8,21 +8,23 @@ using UnityEngine;
 namespace BubbleGauntlet.Utilities {
     public class AssetLoader {
         public static Sprite LoadInternal(string folder, string file, Vector2Int size, TextureFormat format) {
-            return Image2Sprite.Create($"{ModSettings.ModEntry.Path}Assets{Path.DirectorySeparatorChar}{folder}{Path.DirectorySeparatorChar}{file}", size, format);
+            return CreateSprite($"{ModSettings.ModEntry.Path}Assets{Path.DirectorySeparatorChar}{folder}{Path.DirectorySeparatorChar}{file}", size, format);
         }
-        // Loosely based on https://forum.unity.com/threads/generating-sprites-dynamically-from-png-or-jpeg-files-in-c.343735/
-        public static class Image2Sprite {
-            public static string icons_folder = "";
-            public static Sprite Create(string filePath, Vector2Int size, TextureFormat format) {
-                var bytes = File.ReadAllBytes(icons_folder + filePath);
-                var texture = new Texture2D(size.x, size.y, format, false);
-                texture.mipMapBias = 15.0f;
-                _ = texture.LoadImage(bytes);
-                return Sprite.Create(texture, new Rect(0, 0, size.x, size.y), new Vector2(0, 0));
-            }
+        public static Texture2D LoadTexture(string folder, string file, Vector2Int size, TextureFormat format) {
+            return CreateTexture($"{ModSettings.ModEntry.Path}Assets{Path.DirectorySeparatorChar}{folder}{Path.DirectorySeparatorChar}{file}", size, format);
+        }
+        public static Sprite CreateSprite(string filePath, Vector2Int size, TextureFormat format) {
+            return Sprite.Create(CreateTexture(filePath, size, format), new Rect(0, 0, size.x, size.y), new Vector2(0, 0));
+        }
+        public static Texture2D CreateTexture(string filePath, Vector2Int size, TextureFormat format) {
+            var bytes = File.ReadAllBytes(filePath);
+            var texture = new Texture2D(size.x, size.y, format, false);
+            texture.mipMapBias = 15.0f;
+            _ = texture.LoadImage(bytes);
+            return texture;
         }
 
-        private static Dictionary<string, GameObject> Objects = new();
+        public static Dictionary<string, GameObject> Objects = new();
         public static Dictionary<string, Sprite> Sprites = new();
         public static Dictionary<string, Mesh> Meshes = new();
         public static Dictionary<string, Material> Materials = new();
