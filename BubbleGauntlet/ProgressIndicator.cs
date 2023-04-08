@@ -5,6 +5,7 @@ using Kingmaker.UI.MVVM._VM.Tooltip;
 using Kingmaker.UI.MVVM._VM.Tooltip.Bricks;
 using Kingmaker.UI.MVVM._VM.Tooltip.Templates;
 using Kingmaker.UI.MVVM._VM.Tooltip.Utils;
+using Owlcat.Runtime.UI.Tooltips;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -193,6 +194,8 @@ namespace BubbleGauntlet {
         }
 
         internal static void Refresh() {
+            return;
+
             var state = GauntletController.Floor;
             CurrentFloorLabel.text = state.Level.ToString();
             CurrentThemeLabel.text = UIUtilityTexts.GetSingleEnergyTextSymbol(state.DamageTheme);
@@ -226,7 +229,9 @@ namespace BubbleGauntlet {
         }
 
         public static void Uninstall() {
-            GameObject.Destroy(Root);
+            if (Root != null) {
+                GameObject.Destroy(Root);
+            }
         }
     }
     public class TooltipFloorThemeTemplate : TooltipBaseTemplate {

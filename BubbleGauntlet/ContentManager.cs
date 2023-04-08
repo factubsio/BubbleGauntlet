@@ -1,4 +1,5 @@
 ﻿using BubbleGauntlet.Bosses;
+using BubbleGauntlet.Config;
 using BubbleGauntlet.Extensions;
 using BubbleGauntlet.Utilities;
 using HarmonyLib;
@@ -34,6 +35,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using static Kingmaker.QA.Statistics.ExperienceGainStatistic;
 
 namespace BubbleGauntlet {
@@ -317,15 +319,17 @@ namespace BubbleGauntlet {
 
             Main.Log("Initializing Gauntlet Blueprints");
 
-            if (!BlueprintRoot.Instance.NewGameSettings.StoryList.Any(e => e.Title.Key == "bubblegauntlet-mm-title")) {
-                BlueprintRoot.Instance.NewGameSettings.StoryList.Add(new NewGameRoot.StoryEntity {
-                    Title = Helpers.CreateString("bubblegauntlet-mm-title", "Bubble Gauntlet"),
-                    Description = Helpers.CreateString("bubblegauntlet-mm-desc", $"{"WANTED".MakeTitle()}: Adventurers stupid enough to trust a Bubble\n\n" +
-                        "You must bubble through dangerous bubbles while bubbling monsters of the bubbly variety!"),
-                    KeyArt = AssetLoader.LoadInternal("sprites", "NewGame.png", new Vector2Int(1232, 820), TextureFormat.BC7)
-                });
-                BlueprintRoot.Instance.NewGameSettings.StoryList.RemoveAt(0);
-            }
+            var mainCampaign = BP.Get<BlueprintCampaign>("fd2e11ebb8a14d6599450fc27f03486a");
+
+            //if (!BlueprintRoot.Instance.NewGameSettings.StoryCampaigns.Any(e => e.Title.Key == "bubblegauntlet-mm-title")) {
+            //    BlueprintRoot.Instance.NewGameSettings.StoryCampaigns.Add(new NewGameRoot.StoryEntity {
+            //        Title = Helpers.CreateString("bubblegauntlet-mm-title", "Bubble Gauntlet"),
+            //        Description = Helpers.CreateString("bubblegauntlet-mm-desc", $"{"WANTED".MakeTitle()}: Adventurers stupid enough to trust a Bubble\n\n" +
+            //            "You must bubble through dangerous bubbles while bubbling monsters of the bubbly variety!"),
+            //        KeyArt = AssetLoader.LoadInternal("sprites", "NewGame.png", new Vector2Int(1232, 820), TextureFormat.BC7)
+            //    });
+            //    BlueprintRoot.Instance.NewGameSettings.StoryList.RemoveAt(0);
+            //}
 
             MonsterDB.Initialize();
 
@@ -351,6 +355,7 @@ namespace BubbleGauntlet {
             CreateBubbleMasterBlueprint();
 
             MapManager.Install();
+            MapManager.Maps.Last().Area.m_StaticScene = new("cockpalace");
 
             //Never go to global map but I think it's required or the game will cry
             var globalMapLocation_dummy = BP.Get<BlueprintGlobalMapPoint>("556d74cd8f75e674981862b10a84fa70");
@@ -364,6 +369,7 @@ namespace BubbleGauntlet {
                     preset.m_OverrideGameDifficulty = initialPreset.m_OverrideGameDifficulty;
                     preset.m_OverrideGameDifficulty.Preset.DamageToParty = 0.2f;
                     preset.m_PlayerCharacter = initialPreset.m_PlayerCharacter;
+                    preset.m_Campaign = mainCampaign.ToReference<BlueprintCampaignReference>();
                     preset.AddResources = new();
                     preset.m_KingdomIncomePerClaimed = new();
                     preset.m_Stats = new();
@@ -381,6 +387,8 @@ namespace BubbleGauntlet {
 
             Main.Log("validating new game preset");
             bp.Validate();
+
+            mainCampaign.m_StartGamePreset = bp.ToReference<BlueprintAreaPresetReference>();
 
             Main.Log("setting new game preset (BlueprintRoot)");
             BlueprintRoot.Instance.NewGamePreset = bp;

@@ -14,6 +14,7 @@ using Kingmaker.UnitLogic.Buffs.Blueprints;
 using Kingmaker.UnitLogic.FactLogic;
 using Kingmaker.UnitLogic.Mechanics.Components;
 using Kingmaker.Utility;
+using Owlcat.Runtime.UI.Tooltips;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;

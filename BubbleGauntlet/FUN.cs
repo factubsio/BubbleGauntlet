@@ -179,7 +179,7 @@ namespace BubbleGauntlet {
                 Context.TriggerRule(damageFriend);
             }
 
-            evt.DamageBundle.First.AddDecline(new(DamageDeclineType.Total, this));
+            evt.DamageBundle.First.AddDecline(new(DamageDeclineType.Total, this.Fact));
             evt.DamageBundle.First.PreRolledValue = 0;
             evt.DamageBundle.First.SourceFact = Fact;
         }
@@ -195,7 +195,7 @@ namespace BubbleGauntlet {
                 DamageEnergyType? nullable = baseDamage is EnergyDamage energyDamage ? new DamageEnergyType?(energyDamage.EnergyType) : null;
                 DamageEnergyType type = Type;
                 if (nullable.GetValueOrDefault() == type & nullable != null && !Owner.State.HasCondition(UnitCondition.SuppressedEnergyImmunity)) {
-                    baseDamage.AddDecline(new(DamageDeclineType.Total, this));
+                    baseDamage.AddDecline(new(DamageDeclineType.Total, this.Fact));
                 }
             }
         }
@@ -781,7 +781,7 @@ namespace BubbleGauntlet {
                     Level = d.Level
                 }).ToArray();
             __result.Features = UnitDescriptionHelper.ExtractFeatures(sourceUnit);
-            __result.UIFeatures = UnitDescriptionHelper.ExtractFeaturesForUI(sourceUnit);
+            //__result.UIFeatures = UnitDescriptionHelper.ExtractFeaturesForUI(sourceUnit);
             __result.HD = sourceUnit.Progression.CharacterLevel;
         }
 

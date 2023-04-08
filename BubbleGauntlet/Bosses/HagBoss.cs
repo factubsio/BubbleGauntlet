@@ -556,7 +556,7 @@ namespace BubbleGauntlet.Bosses {
             Game.Instance.UI.Bark(unit, barkOnActivate[hag], 5);
 
 
-            activeFx = FxHelper.SpawnFxOnUnit(beamFx, unit.View, null, default);
+            activeFx = FxHelper.SpawnFxOnUnit(beamFx, unit.View, null, default).SpawnedObject;
         }
         private static CommandBark MakePoemLineBark(int hag, string text) {
             return Helpers.CreateBlueprint<CommandBark>($"bark://hag-poem/{hag}", b => {

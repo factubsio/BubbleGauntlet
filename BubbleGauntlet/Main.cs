@@ -21,8 +21,6 @@ using Kingmaker.UnitLogic.Parts;
 using Kingmaker.View.MapObjects;
 using Kingmaker.ElementsSystem;
 using Kingmaker.Utility;
-using Kingmaker.UI.Log.CombatLog_ThreadSystem;
-using Kingmaker.UI.Log.CombatLog_ThreadSystem.LogThreads.Common;
 using Kingmaker.Blueprints.Root.Strings.GameLog;
 using Kingmaker.UI.MVVM._VM.Tooltip.Templates;
 using Kingmaker.Visual.Particles;
@@ -48,6 +46,10 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Kingmaker.UnitLogic.ActivatableAbilities;
 using BubbleGauntlet.Extensions;
+using Owlcat.Runtime.UI.Tooltips;
+using Kingmaker.UI.Models.Log.CombatLog_ThreadSystem;
+using Kingmaker.UI.Models.Log.CombatLog_ThreadSystem.LogThreads.Common;
+using UnityEngine.SceneManagement;
 
 namespace BubbleGauntlet {
 
@@ -242,7 +244,7 @@ namespace BubbleGauntlet {
 
     class GameEventHandler : IAreaHandler, IPartyCombatHandler, IWarningNotificationUIHandler, IAreaActivationHandler {
         public void HandlePartyCombatStateChanged(bool inCombat) {
-            ProgressIndicator.Visible = !inCombat;
+            //ProgressIndicator.Visible = !inCombat;
         }
 
         void IWarningNotificationUIHandler.HandleWarning(WarningNotificationType warningType, bool addToLog) {
@@ -255,7 +257,32 @@ namespace BubbleGauntlet {
         void IAreaActivationHandler.OnAreaActivated() {
 
             try {
-                ProgressIndicator.Install();
+                Main.Log(BubbleForce.RaceContentVersion);
+                Main.Log(nameof(Bubble_Weather.tag));
+                var palace = SceneManager.GetSceneByName("cockpalace");
+                if (palace != null) {
+                    Main.Log("COCKPALACE LOADED");
+
+                    var mat = new EquipmentEntityLink { AssetId = "1e4cafa72c2a2f5468c83868873f31ec" }.Load(false).BodyParts[0].Material;
+                    var terrainShader = Shader.Find("Owlcat/Terrain");
+
+                    var roots = palace.GetRootGameObjects();
+                    foreach (var root in roots) {
+                        foreach (var r in root.GetComponentsInChildren<MeshRenderer>()) {
+                            try {
+                                r.material.shader = mat.shader;
+                            } catch (Exception ex) {
+                                Main.Error(ex, "setting shader for " + r.gameObject.name);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception ex) {
+                Main.Error(ex, "patching mats");
+            }
+
+            try {
+                //ProgressIndicator.Install();
                 GauntletController.InstallGauntletController();
             } catch (Exception e) {
                 Main.Error(e, "area-activated");
@@ -317,6 +344,13 @@ namespace BubbleGauntlet {
                 }
             } catch (Exception e) {
                 Error(e, "loading");
+            }
+
+            try {
+                Main.Log(BubbleForce.RaceContentVersion);
+                Main.Log(nameof(Bubble_Weather.tag));
+            } catch (Exception e) {
+                Error(e, "races");
             }
 
 #if BUBBLEDEV
@@ -403,7 +437,7 @@ namespace BubbleGauntlet {
             harmony.UnpatchAll();
             EventBus.Unsubscribe(GameStartHijacker);
             BP.RemoveModBlueprints();
-            ProgressIndicator.Uninstall();
+            //ProgressIndicator.Uninstall();
 
             return true;
         }
@@ -441,9 +475,9 @@ namespace BubbleGauntlet {
         }
 
         public static void CombatLog(string str, Color col, TooltipBaseTemplate tooltip = null) {
-            var message = new CombatLogMessage(str, col, PrefixIcon.None, tooltip, tooltip != null);
-            var messageLog = LogThreadController.Instance.m_Logs[LogChannelType.Common].First(x => x is MessageLogThread);
-            messageLog.AddMessage(message);
+            //var message = new CombatLogMessage(str, col, PrefixIcon.None, tooltip, tooltip != null);
+            //var messageLog = LogThreadController.Instance.m_Logs[LogChannelType.Common].First(x => x is MessageLogThread);
+            //messageLog.AddMessage(message);
         }
         public static void CombatLog(string str) {
             CombatLog(str, GameLogStrings.Instance.DefaultColor);
